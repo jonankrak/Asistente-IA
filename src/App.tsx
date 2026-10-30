@@ -10,7 +10,7 @@ import { DevConsole } from './components/DevConsole';
 import { A11yAnnouncer } from './components/A11yAnnouncer';
 
 const MainContent: React.FC = () => {
-  const { mode } = useAccessibility();
+  const { mode, isMobile } = useAccessibility();
 
   return (
     <div className="min-h-screen flex flex-col bg-a11y-bg text-a11y-text transition-colors duration-200">
@@ -25,14 +25,16 @@ const MainContent: React.FC = () => {
       {/* Región de anuncios ARIA Live en vivo */}
       <A11yAnnouncer />
 
-      {/* Barra de cabecera y selector de modos */}
+      {/* Barra de cabecera (PC) o Barra superior compacta + Barra inferior fija (Móvil) */}
       <Header />
 
       {/* Contenido principal según el modo seleccionado */}
       <main
         id="main-content"
         tabIndex={-1}
-        className="flex-1 flex flex-col items-center justify-start w-full outline-none"
+        className={`flex-1 flex flex-col items-center justify-start w-full outline-none ${
+          isMobile ? 'pb-28' : ''
+        }`}
         role="main"
       >
         {mode === 'visual' && <VisualMode />}
@@ -40,13 +42,15 @@ const MainContent: React.FC = () => {
         {mode === 'auditory' && <AuditoryMode />}
       </main>
 
-      {/* Pie de página con información de accesibilidad */}
-      <footer className="w-full border-t-4 border-a11y-border bg-a11y-card p-4 text-center text-sm font-bold opacity-90">
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Diseñado conforme a WCAG 2.2 Nivel AAA • Áreas táctiles ≥64px</span>
-          <span>IA Multimodal Gemini 3.8 Flash • Web Speech & MediaDevices</span>
-        </div>
-      </footer>
+      {/* Pie de página informativo en modo Ordenador */}
+      {!isMobile && (
+        <footer className="w-full border-t-4 border-a11y-border bg-a11y-card p-4 text-center text-sm font-bold opacity-90">
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>Diseñado conforme a WCAG 2.2 Nivel AAA • Norma UNE 153101:2018 EX • ATECA</span>
+            <span>IA Multimodal Gemini • Pictogramas ARASAAC • Web Speech API</span>
+          </div>
+        </footer>
+      )}
 
       {/* Selector Inicial de Perfil Diagnóstico / Funcional */}
       <ProfileSelectorModal />

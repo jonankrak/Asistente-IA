@@ -14,6 +14,8 @@ interface Announcement {
 interface AccessibilityContextType {
   mode: AssistanceMode;
   setMode: (mode: AssistanceMode) => void;
+  isMobile: boolean;
+  toggleDeviceMode: () => void;
   userProfile: UserProfileOption;
   selectUserProfile: (profileId: UserProfileId) => void;
   isProfileModalOpen: boolean;
@@ -49,8 +51,42 @@ const STORAGE_KEYS = {
   USER_PROFILE: 'a11y_user_profile_id',
 };
 
+function detectIsMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+  const isSmallViewport = window.innerWidth <= 820;
+  const isCoarsePointer =
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches &&
+    window.innerWidth <= 1024;
+  return isMobileUA || isSmallViewport || isCoarsePointer;
+}
+
 export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { triggerShort, triggerSuccess } = useHaptics();
+
+  // Detección automática de Móvil vs Ordenador (PC), con posibilidad de alternar manualmente
+  const [manualDeviceOverride, setManualDeviceOverride] = useState<'mobile' | 'desktop' | null>(null);
+  const [autoDetectedMobile, setAutoDetectedMobile] = useState<boolean>(() => detectIsMobileDevice());
+
+  useEffect(() => {
+    const handleResize = () => {
+      setAutoDetectedMobile(detectIsMobileDevice());
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile =
+    manualDeviceOverride !== null ? manualDeviceOverride === 'mobile' : autoDetectedMobile;
+
+  useEffect(() => {
+    devLogger.info(
+      'Dispositivo',
+      `Interfaz adaptada a: ${isMobile ? 'Teléfono Móvil (Táctil)' : 'Ordenador (Escritorio)'}`
+    );
+  }, [isMobile]);
 
   // Perfil de usuario inicial
   const [userProfile, setUserProfileState] = useState<UserProfileOption>(() => {
@@ -71,7 +107,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const [contrastTheme, setContrastThemeState] = useState<ContrastTheme>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CONTRAST) as ContrastTheme;
-    return saved || 'yellow-black'; // Tema de máximo contraste por defecto para accesibilidad
+    return saved || 'yellow-black';
   });
 
   const [fontSize, setFontSizeState] = useState<FontSize>(() => {
@@ -90,7 +126,6 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   });
 
   const [apiKey, setApiKeyState] = useState<string>(() => {
-    // 1. Permitir auto-configurar la API Key en el teléfono mediante #key=... en el enlace/QR
     let hashKey = '';
     if (typeof window !== 'undefined' && window.location.hash.includes('key=')) {
       const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
@@ -132,6 +167,18 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
     const id = `announce-${Date.now()}-${Math.random()}`;
     setAnnouncements((prev) => [...prev.slice(-3), { id, message, priority }]);
   }, []);
+
+  const toggleDeviceMode = useCallback(() => {
+    const next = isMobile ? 'desktop' : 'mobile';
+    setManualDeviceOverride(next);
+    if (hapticEnabled) triggerShort();
+    announce(
+      next === 'mobile'
+        ? 'Cambiado a diseño optimizado para Teléfono Móvil'
+        : 'Cambiado a diseño de Escritorio para Ordenador',
+      'polite'
+    );
+  }, [isMobile, hapticEnabled, triggerShort, announce]);
 
   const setMode = useCallback(
     (newMode: AssistanceMode) => {
@@ -185,7 +232,6 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       setUserProfileState(chosen);
       localStorage.setItem(STORAGE_KEYS.USER_PROFILE, chosen.id);
 
-      // Aplicar ajustes recomendados del perfil elegido
       setModeState(chosen.recommendedMode);
       localStorage.setItem(STORAGE_KEYS.MODE, chosen.recommendedMode);
       setFontSize(chosen.recommendedFontSize);
@@ -255,6 +301,8 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       value={{
         mode,
         setMode,
+        isMobile,
+        toggleDeviceMode,
         userProfile,
         selectUserProfile,
         isProfileModalOpen,

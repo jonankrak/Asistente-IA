@@ -69,7 +69,7 @@ export const ProfileSelectorModal: React.FC = () => {
           <div
             role="tablist"
             aria-label="Categorías de perfil de usuario"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3"
           >
             {PROFILE_CATEGORIES.map((cat) => {
               const isSelected = cat.id === activeCategory;
@@ -79,16 +79,16 @@ export const ProfileSelectorModal: React.FC = () => {
                   role="tab"
                   aria-selected={isSelected}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`touch-target min-h-[76px] p-3.5 rounded-2xl border-4 text-left flex items-center gap-3 transition-all ${
+                  className={`touch-target min-h-[68px] p-3 rounded-2xl border-4 text-left flex items-center gap-2.5 transition-all ${
                     isSelected
-                      ? 'bg-a11y-primary text-a11y-primaryText border-a11y-border font-black shadow-lg scale-[1.02]'
+                      ? 'bg-a11y-primary text-a11y-primaryText border-a11y-border font-black shadow-lg scale-[1.01]'
                       : 'bg-a11y-bg text-a11y-text border-a11y-border font-bold opacity-85 hover:opacity-100'
                   }`}
                 >
-                  <span className="text-3xl shrink-0" aria-hidden="true">
+                  <span className="text-2xl sm:text-3xl shrink-0" aria-hidden="true">
                     {cat.emoji}
                   </span>
-                  <span className="text-base md:text-lg leading-tight">{cat.title}</span>
+                  <span className="text-sm sm:text-base md:text-lg leading-tight">{cat.title}</span>
                 </button>
               );
             })}

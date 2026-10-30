@@ -35,6 +35,7 @@ export const CognitiveMode: React.FC = () => {
     speechRate,
     hapticEnabled,
     hasApiKey,
+    isMobile,
     userProfile,
     setIsProfileModalOpen
   } = useAccessibility();
@@ -388,25 +389,25 @@ export const CognitiveMode: React.FC = () => {
         <div
           role="tablist"
           aria-label="Tipo de adaptación cognitiva"
-          className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2"
+          className="grid grid-cols-2 gap-3 pt-1"
         >
           <button
             role="tab"
             aria-selected={outputFormat === 'easy-read'}
             onClick={() => handleSelectFormat('easy-read')}
-            className={`touch-target min-h-[76px] p-4 rounded-2xl border-4 font-black text-left flex items-center gap-4 transition-all ${
+            className={`touch-target min-h-[72px] p-3.5 md:p-4 rounded-2xl border-4 font-black text-left flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 transition-all ${
               outputFormat === 'easy-read'
                 ? 'bg-a11y-primary text-a11y-primaryText border-a11y-border shadow-lg scale-[1.01]'
                 : 'bg-a11y-bg text-a11y-text border-a11y-border opacity-85 hover:opacity-100'
             }`}
           >
-            <FileText className="w-10 h-10 shrink-0" aria-hidden="true" />
-            <div>
-              <div className="text-xl md:text-2xl leading-tight">
-                1. Lectura Fácil (UNE + ATECA)
+            <FileText className="w-8 h-8 md:w-10 md:h-10 shrink-0" aria-hidden="true" />
+            <div className="text-center sm:text-left">
+              <div className="text-base sm:text-xl md:text-2xl leading-tight">
+                {isMobile ? 'Lectura Fácil' : '1. Lectura Fácil (UNE + ATECA)'}
               </div>
-              <div className="text-sm font-bold opacity-90 mt-0.5">
-                Norma UNE 153101:2018 EX y validador lingüístico ATECA
+              <div className="text-xs sm:text-sm font-bold opacity-90 mt-0.5">
+                {isMobile ? 'Norma UNE / ATECA' : 'Norma UNE 153101:2018 EX y validador lingüístico ATECA'}
               </div>
             </div>
           </button>
@@ -415,30 +416,30 @@ export const CognitiveMode: React.FC = () => {
             role="tab"
             aria-selected={outputFormat === 'pictograms'}
             onClick={() => handleSelectFormat('pictograms')}
-            className={`touch-target min-h-[76px] p-4 rounded-2xl border-4 font-black text-left flex items-center gap-4 transition-all ${
+            className={`touch-target min-h-[72px] p-3.5 md:p-4 rounded-2xl border-4 font-black text-left flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 transition-all ${
               outputFormat === 'pictograms'
                 ? 'bg-a11y-primary text-a11y-primaryText border-a11y-border shadow-lg scale-[1.01]'
                 : 'bg-a11y-bg text-a11y-text border-a11y-border opacity-85 hover:opacity-100'
             }`}
           >
-            <Images className="w-10 h-10 shrink-0" aria-hidden="true" />
-            <div>
-              <div className="text-xl md:text-2xl leading-tight">
-                2. Pictogramas ARASAAC
+            <Images className="w-8 h-8 md:w-10 md:h-10 shrink-0" aria-hidden="true" />
+            <div className="text-center sm:text-left">
+              <div className="text-base sm:text-xl md:text-2xl leading-tight">
+                {isMobile ? 'Pictogramas' : '2. Pictogramas ARASAAC'}
               </div>
-              <div className="text-sm font-bold opacity-90 mt-0.5">
-                Traduce frases o tareas a símbolos visuales oficiales de ARASAAC
+              <div className="text-xs sm:text-sm font-bold opacity-90 mt-0.5">
+                {isMobile ? 'Símbolos ARASAAC' : 'Traduce frases o tareas a símbolos visuales oficiales de ARASAAC'}
               </div>
             </div>
           </button>
         </div>
       </div>
 
-      {/* Selector de Entrada: Cámara, Subir Imagen o Dictar */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Selector de Entrada: Cámara, Subir Imagen o Dictar (Grid de 3 botones en móvil) */}
+      <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3">
         <button
           onClick={handleToggleCamera}
-          className={`touch-target px-5 py-3 rounded-2xl border-4 font-black text-lg flex items-center gap-3 transition-colors ${
+          className={`touch-target min-h-[68px] px-3 sm:px-5 py-3 rounded-2xl border-4 font-black text-sm sm:text-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3 transition-colors ${
             isCameraActive
               ? 'bg-red-500 text-black border-red-700'
               : 'bg-a11y-bg text-a11y-text border-a11y-border hover:bg-a11y-primary hover:text-a11y-primaryText'
@@ -449,17 +450,21 @@ export const CognitiveMode: React.FC = () => {
               : 'Abrir cámara para fotografiar carta, cartel o factura'
           }
         >
-          <Camera className="w-7 h-7" aria-hidden="true" />
-          <span>{isCameraActive ? 'Cerrar Cámara' : 'Foto a Documento'}</span>
+          <Camera className="w-7 h-7 shrink-0" aria-hidden="true" />
+          <span className="text-center leading-tight">
+            {isCameraActive ? 'Cerrar' : isMobile ? 'Cámara' : 'Foto a Documento'}
+          </span>
         </button>
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="touch-target px-5 py-3 rounded-2xl border-4 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-lg flex items-center gap-3"
+          className="touch-target min-h-[68px] px-3 sm:px-5 py-3 rounded-2xl border-4 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-sm sm:text-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3"
           aria-label="Subir foto desde tus archivos o galería"
         >
-          <Upload className="w-7 h-7" aria-hidden="true" />
-          <span>Subir Imagen</span>
+          <Upload className="w-7 h-7 shrink-0" aria-hidden="true" />
+          <span className="text-center leading-tight">
+            {isMobile ? 'Galería' : 'Subir Imagen'}
+          </span>
         </button>
         <input
           type="file"
@@ -472,7 +477,7 @@ export const CognitiveMode: React.FC = () => {
 
         <button
           onClick={handleToggleMic}
-          className={`touch-target px-5 py-3 rounded-2xl border-4 font-black text-lg flex items-center gap-3 transition-colors ${
+          className={`touch-target min-h-[68px] px-3 sm:px-5 py-3 rounded-2xl border-4 font-black text-sm sm:text-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3 transition-colors ${
             isListening
               ? 'bg-yellow-400 text-black border-black animate-pulse'
               : 'bg-a11y-bg text-a11y-text border-a11y-border hover:bg-a11y-primary hover:text-a11y-primaryText'
@@ -481,8 +486,10 @@ export const CognitiveMode: React.FC = () => {
             isListening ? 'Detener dictado por voz' : 'Dictar tarea o texto con tu voz'
           }
         >
-          <Mic className="w-7 h-7" aria-hidden="true" />
-          <span>{isListening ? 'Detener Dictado' : 'Dictar con Voz'}</span>
+          <Mic className="w-7 h-7 shrink-0" aria-hidden="true" />
+          <span className="text-center leading-tight">
+            {isListening ? 'Parar' : isMobile ? 'Dictar' : 'Dictar con Voz'}
+          </span>
         </button>
       </div>
 
@@ -885,9 +892,9 @@ export const CognitiveMode: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Fila de tarjetas de Pictogramas ARASAAC */}
+                {/* Fila de tarjetas de Pictogramas ARASAAC (Cuadrícula 2 columnas en móvil, fila flexible en PC) */}
                 <div
-                  className="flex flex-wrap items-stretch gap-4 pt-1"
+                  className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-3 sm:gap-4 pt-1"
                   role="group"
                   aria-label={`Pictogramas del paso ${phrase.stepNumber}`}
                 >
@@ -896,7 +903,7 @@ export const CognitiveMode: React.FC = () => {
                       key={`${phrase.id}-tok-${idx}`}
                       type="button"
                       onClick={() => readWordAloud(token.word)}
-                      className="touch-target w-36 sm:w-40 p-3 rounded-2xl border-4 border-black bg-white text-black hover:scale-105 active:scale-95 transition-transform flex flex-col items-center justify-between shadow-md focus:ring-4 focus:ring-yellow-400"
+                      className="touch-target w-full sm:w-40 p-3 rounded-2xl border-4 border-black bg-white text-black hover:scale-105 active:scale-95 transition-transform flex flex-col items-center justify-between shadow-md focus:ring-4 focus:ring-yellow-400"
                       aria-label={`Pictograma: ${token.word}. Tocar para escuchar palabra.`}
                     >
                       <div className="w-28 h-28 flex items-center justify-center bg-white rounded-xl overflow-hidden">
