@@ -1,0 +1,19 @@
+{
+  "name": "Asistente Adaptado Multimodal con IA",
+  "short_name": "Asistente IA",
+  "description": "Asistente accesible e inclusivo para personas con discapacidad visual, cognitiva y del habla",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

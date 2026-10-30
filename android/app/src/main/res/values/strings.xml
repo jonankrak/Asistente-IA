@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Asistente IA Adaptado</string>
+    <string name="title_activity_main">Asistente IA Adaptado</string>
+    <string name="package_name">com.asistente.adaptado</string>
+    <string name="custom_url_scheme">com.asistente.adaptado</string>
+</resources>
