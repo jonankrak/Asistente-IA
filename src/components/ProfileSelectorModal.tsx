@@ -30,34 +30,33 @@ export const ProfileSelectorModal: React.FC = () => {
       role="dialog"
       aria-modal="true"
       aria-labelledby="profile-selector-title"
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-5 overflow-y-auto overscroll-contain"
     >
-      <div className="w-full max-w-5xl bg-a11y-card border-4 border-a11y-border rounded-3xl p-5 md:p-7 space-y-6 shadow-2xl my-auto">
-        {/* Cabecera */}
-        <div className="flex items-start justify-between gap-4 border-b-4 border-a11y-border pb-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <UserCheck className="w-9 h-9 text-a11y-primary shrink-0" aria-hidden="true" />
+      <div className="w-full max-w-5xl max-h-[95dvh] overflow-y-auto bg-a11y-card border-4 border-a11y-border rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-7 space-y-4 sm:space-y-6 shadow-2xl my-auto">
+        {/* Cabecera fija arriba al hacer scroll en móvil Android */}
+        <div className="sticky -top-4 z-10 bg-a11y-card flex items-start justify-between gap-3 border-b-4 border-a11y-border pb-3 pt-1">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2.5">
+              <UserCheck className="w-7 h-7 sm:w-9 sm:h-9 text-a11y-primary shrink-0" aria-hidden="true" />
               <h2
                 id="profile-selector-title"
-                className="text-2xl md:text-3xl font-black text-a11y-text"
+                className="text-xl sm:text-2xl md:text-3xl font-black text-a11y-text leading-tight"
               >
                 Selecciona el Perfil de Apoyo
               </h2>
             </div>
-            <p className="text-base md:text-lg font-bold opacity-90 text-a11y-text">
-              Elige la categoría y el grado/nivel para que la interfaz y la Inteligencia Artificial
-              adapten automáticamente el vocabulario, los pictogramas ARASAAC y la estructura.
+            <p className="text-xs sm:text-base md:text-lg font-bold opacity-90 text-a11y-text">
+              Elige la categoría y el nivel para adaptar el vocabulario, los pictogramas ARASAAC y la voz.
             </p>
           </div>
 
           <button
             onClick={() => setIsProfileModalOpen(false)}
-            className="touch-target p-3 rounded-2xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText shrink-0"
+            className="touch-target p-2.5 sm:p-3 rounded-2xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText shrink-0"
             aria-label={`Continuar con el perfil actual (${userProfile.shortTitle})`}
             title="Cerrar y continuar con el perfil actual (Escape)"
           >
-            <X className="w-7 h-7" aria-hidden="true" />
+            <X className="w-6 h-6 sm:w-7 sm:h-7" aria-hidden="true" />
           </button>
         </div>
 

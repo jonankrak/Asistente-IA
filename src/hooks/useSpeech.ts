@@ -66,7 +66,9 @@ export function useSpeech(options: UseSpeechOptions = {}) {
       setRecognitionSupported(true);
       try {
         const recognition = new SpeechRecognitionClass();
-        recognition.continuous = true;
+        // En Chrome de Android, continuous=true duplica sílabas/palabras; usar false en Android evita repeticiones
+        const isAndroid = /Android/i.test(navigator.userAgent || '');
+        recognition.continuous = !isAndroid;
         recognition.interimResults = true;
         recognition.lang = lang;
         recognitionRef.current = recognition;
@@ -237,9 +239,15 @@ export function useSpeech(options: UseSpeechOptions = {}) {
     utterance.rate = customRate || rate;
     utterance.pitch = pitch;
 
-    // Buscar una voz nativa en español
+    // Buscar una voz nativa en español (en Android Chrome el código suele ser es_ES o es-ES)
     const currentVoices = window.speechSynthesis.getVoices();
-    const esVoice = currentVoices.find(v => v.lang.startsWith('es') || v.lang.includes('es-')) || currentVoices[0];
+    const esVoice =
+      currentVoices.find(
+        (v) =>
+          v.lang.toLowerCase().startsWith('es') ||
+          v.lang.toLowerCase().includes('es-') ||
+          v.lang.toLowerCase().includes('es_')
+      ) || currentVoices[0];
     if (esVoice) {
       utterance.voice = esVoice;
     }
@@ -259,7 +267,10 @@ export function useSpeech(options: UseSpeechOptions = {}) {
       setIsSpeaking(false);
     };
 
-    window.speechSynthesis.speak(utterance);
+    // En Chrome de Android, un breve retardo tras cancel() evita que el motor TTS ignore la nueva locución
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, 50);
   }, [lang, rate, pitch]);
 
   // Detener voz inmediatamente

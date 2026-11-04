@@ -67,6 +67,7 @@ export const CognitiveMode: React.FC = () => {
   const [pictoPhrases, setPictoPhrases] = useState<PictogramPhrase[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraNativeInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     videoRef,
@@ -105,13 +106,17 @@ export const CognitiveMode: React.FC = () => {
     }
   };
 
-  // Alternar vista de cámara
+  // Alternar vista de cámara (con fallback a cámara nativa de Android Chrome)
   const handleToggleCamera = async () => {
     if (isCameraActive) {
       stopCamera();
     } else {
-      await startCamera('environment');
-      announce('Cámara activada para fotografiar documento', 'polite');
+      const started = await startCamera('environment');
+      if (started) {
+        announce('Cámara activada para fotografiar documento', 'polite');
+      } else {
+        cameraNativeInputRef.current?.click();
+      }
     }
   };
 
@@ -471,6 +476,15 @@ export const CognitiveMode: React.FC = () => {
           ref={fileInputRef}
           onChange={handleFileUpload}
           accept="image/*"
+          className="hidden"
+          aria-hidden="true"
+        />
+        <input
+          type="file"
+          ref={cameraNativeInputRef}
+          onChange={handleFileUpload}
+          accept="image/*"
+          capture="environment"
           className="hidden"
           aria-hidden="true"
         />

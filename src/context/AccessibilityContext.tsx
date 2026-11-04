@@ -54,13 +54,22 @@ const STORAGE_KEYS = {
 function detectIsMobileDevice(): boolean {
   if (typeof window === 'undefined') return false;
   const ua = navigator.userAgent || '';
-  const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
-  const isSmallViewport = window.innerWidth <= 820;
+  const platform = (navigator as any).platform || '';
+  const uaDataMobile = Boolean((navigator as any).userAgentData?.mobile);
+
+  // Detecta Android (incluso si Chrome Android tiene activado "Sitio para ordenador" donde reporta Linux armv8l/aarch64 con pantalla táctil)
+  const isAndroidOrIOS =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua) ||
+    (/Linux/i.test(platform) && navigator.maxTouchPoints > 1);
+
+  const isSmallViewport = window.innerWidth <= 860 || window.screen.width <= 860;
   const isCoarsePointer =
     typeof window.matchMedia === 'function' &&
-    window.matchMedia('(pointer: coarse)').matches &&
-    window.innerWidth <= 1024;
-  return isMobileUA || isSmallViewport || isCoarsePointer;
+    (window.matchMedia('(pointer: coarse)').matches ||
+      window.matchMedia('(hover: none)').matches) &&
+    window.innerWidth <= 1100;
+
+  return uaDataMobile || isAndroidOrIOS || isSmallViewport || isCoarsePointer;
 }
 
 export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

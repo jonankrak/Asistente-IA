@@ -142,10 +142,10 @@ export const Header: React.FC = () => {
           </div>
         </header>
 
-        {/* Barra de Navegación Inferior Fija para el Pulgar en Móvil */}
+        {/* Barra de Navegación Inferior Fija para el Pulgar en Móvil (Compatible con barra de gestos de Android Chrome) */}
         <nav
           aria-label="Navegación principal móvil"
-          className="fixed bottom-0 left-0 right-0 z-40 border-t-4 border-a11y-border bg-a11y-card px-2 py-2 shadow-2xl"
+          className="fixed bottom-0 left-0 right-0 z-40 border-t-4 border-a11y-border bg-a11y-card px-2 pt-2 safe-bottom-nav shadow-2xl"
         >
           <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto">
             {navItems.map((item) => {

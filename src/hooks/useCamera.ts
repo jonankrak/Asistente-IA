@@ -28,16 +28,23 @@ export function useCamera() {
         stream.getTracks().forEach(track => track.stop());
       }
 
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: desiredFacing },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      };
-
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+      let newStream: MediaStream;
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: desiredFacing },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+      } catch {
+        // Fallback para cámaras de móviles Android con restricciones de resolución distintas
+        newStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: desiredFacing },
+          audio: false
+        });
+      }
       setStream(newStream);
       setFacingMode(desiredFacing);
       setIsCameraActive(true);

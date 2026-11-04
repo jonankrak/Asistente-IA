@@ -74,21 +74,21 @@ export const SettingsModal: React.FC = () => {
       role="dialog"
       aria-modal="true"
       aria-labelledby="settings-title"
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain"
     >
-      <div className="w-full max-w-2xl bg-a11y-card border-4 border-a11y-border rounded-3xl p-6 md:p-8 space-y-6 shadow-2xl my-auto">
+      <div className="w-full max-w-2xl max-h-[95dvh] overflow-y-auto bg-a11y-card border-4 border-a11y-border rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 space-y-5 shadow-2xl my-auto">
         {/* Encabezado del Modal */}
-        <div className="flex items-center justify-between border-b-4 border-a11y-border pb-4">
-          <h2 id="settings-title" className="text-2xl md:text-3xl font-black text-a11y-text">
+        <div className="sticky -top-4 z-10 bg-a11y-card flex items-center justify-between border-b-4 border-a11y-border pb-3 pt-1">
+          <h2 id="settings-title" className="text-xl sm:text-2xl md:text-3xl font-black text-a11y-text">
             Ajustes de Accesibilidad e IA
           </h2>
           <button
             ref={closeButtonRef}
             onClick={() => setIsSettingsOpen(false)}
-            className="touch-target p-3 rounded-2xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText"
+            className="touch-target p-2.5 sm:p-3 rounded-2xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText shrink-0"
             aria-label="Cerrar ventana de ajustes (Escape)"
           >
-            <X className="w-8 h-8" aria-hidden="true" />
+            <X className="w-7 h-7 sm:w-8 sm:h-8" aria-hidden="true" />
           </button>
         </div>
 
