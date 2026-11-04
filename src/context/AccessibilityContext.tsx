@@ -29,6 +29,8 @@ interface AccessibilityContextType {
   selectUserProfile: (profileId: UserProfileId) => void;
   isProfileControlEnabled: boolean;
   setIsProfileControlEnabled: (enabled: boolean) => void;
+  isColorProfileControlled: boolean;
+  setIsColorProfileControlled: (enabled: boolean) => void;
   isProfileModalOpen: boolean;
   setIsProfileModalOpen: (open: boolean) => void;
   contrastTheme: ContrastTheme;
@@ -62,6 +64,7 @@ const AccessibilityContext = createContext<AccessibilityContextType | undefined>
 
 const STORAGE_KEYS = {
   PROFILE_CONTROL: 'a11y_profile_control_enabled',
+  COLOR_PROFILE_CONTROL: 'a11y_color_profile_control_enabled',
   USER_PROFILE: 'a11y_user_profile_id',
   MODE: 'a11y_active_mode',
   COGNITIVE_FORMAT: 'a11y_cognitive_format',
@@ -114,9 +117,15 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   const isMobile =
     manualDeviceOverride !== null ? manualDeviceOverride === 'mobile' : autoDetectedMobile;
 
-  // Control Automático por Perfil vs Ajuste Manual
+  // Control Automático por Perfil vs Ajuste Manual (General)
   const [isProfileControlEnabled, setIsProfileControlEnabledState] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.PROFILE_CONTROL);
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  // Control Independiente del Cambio de Color (Automático por Perfil vs Manual Separado)
+  const [isColorProfileControlled, setIsColorProfileControlledState] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.COLOR_PROFILE_CONTROL);
     return saved !== null ? saved === 'true' : true;
   });
 
@@ -217,45 +226,50 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   }, []);
 
   // Aplicar todos los parámetros de un perfil a la aplicación
-  const applyAllProfileParameters = useCallback((profile: UserProfileOption) => {
-    setModeState(profile.recommendedMode);
-    localStorage.setItem(STORAGE_KEYS.MODE, profile.recommendedMode);
+  const applyAllProfileParameters = useCallback(
+    (profile: UserProfileOption, forceColorUpdate: boolean = false) => {
+      setModeState(profile.recommendedMode);
+      localStorage.setItem(STORAGE_KEYS.MODE, profile.recommendedMode);
 
-    setCognitiveFormatState(profile.recommendedFormat);
-    localStorage.setItem(STORAGE_KEYS.COGNITIVE_FORMAT, profile.recommendedFormat);
+      setCognitiveFormatState(profile.recommendedFormat);
+      localStorage.setItem(STORAGE_KEYS.COGNITIVE_FORMAT, profile.recommendedFormat);
 
-    setContrastThemeState(profile.recommendedTheme);
-    localStorage.setItem(STORAGE_KEYS.CONTRAST, profile.recommendedTheme);
-    document.documentElement.setAttribute('data-theme', profile.recommendedTheme);
+      if (isColorProfileControlled || forceColorUpdate) {
+        setContrastThemeState(profile.recommendedTheme);
+        localStorage.setItem(STORAGE_KEYS.CONTRAST, profile.recommendedTheme);
+        document.documentElement.setAttribute('data-theme', profile.recommendedTheme);
+      }
 
-    setFontSizeState(profile.recommendedFontSize);
-    localStorage.setItem(STORAGE_KEYS.FONT_SIZE, profile.recommendedFontSize);
-    document.documentElement.setAttribute('data-font-size', profile.recommendedFontSize);
+      setFontSizeState(profile.recommendedFontSize);
+      localStorage.setItem(STORAGE_KEYS.FONT_SIZE, profile.recommendedFontSize);
+      document.documentElement.setAttribute('data-font-size', profile.recommendedFontSize);
 
-    setSpeechRateState(profile.recommendedSpeechRate);
-    localStorage.setItem(STORAGE_KEYS.SPEECH_RATE, profile.recommendedSpeechRate.toString());
+      setSpeechRateState(profile.recommendedSpeechRate);
+      localStorage.setItem(STORAGE_KEYS.SPEECH_RATE, profile.recommendedSpeechRate.toString());
 
-    setAutoSpeakState(profile.recommendedAutoSpeak);
-    localStorage.setItem(STORAGE_KEYS.AUTO_SPEAK, profile.recommendedAutoSpeak.toString());
+      setAutoSpeakState(profile.recommendedAutoSpeak);
+      localStorage.setItem(STORAGE_KEYS.AUTO_SPEAK, profile.recommendedAutoSpeak.toString());
 
-    setHapticEnabledState(profile.recommendedHaptic);
-    localStorage.setItem(STORAGE_KEYS.HAPTIC, profile.recommendedHaptic.toString());
+      setHapticEnabledState(profile.recommendedHaptic);
+      localStorage.setItem(STORAGE_KEYS.HAPTIC, profile.recommendedHaptic.toString());
 
-    setDyslexiaFriendlyState(profile.dyslexiaFriendly);
-    localStorage.setItem(STORAGE_KEYS.DYSLEXIA, profile.dyslexiaFriendly.toString());
-    document.documentElement.setAttribute(
-      'data-dyslexia',
-      profile.dyslexiaFriendly ? 'true' : 'false'
-    );
+      setDyslexiaFriendlyState(profile.dyslexiaFriendly);
+      localStorage.setItem(STORAGE_KEYS.DYSLEXIA, profile.dyslexiaFriendly.toString());
+      document.documentElement.setAttribute(
+        'data-dyslexia',
+        profile.dyslexiaFriendly ? 'true' : 'false'
+      );
 
-    setStepByStepFocusState(profile.stepByStepFocus);
-    localStorage.setItem(STORAGE_KEYS.STEP_BY_STEP, profile.stepByStepFocus.toString());
+      setStepByStepFocusState(profile.stepByStepFocus);
+      localStorage.setItem(STORAGE_KEYS.STEP_BY_STEP, profile.stepByStepFocus.toString());
 
-    setMaxWordsPerSentenceState(profile.maxWordsPerSentence);
-    localStorage.setItem(STORAGE_KEYS.MAX_WORDS, profile.maxWordsPerSentence.toString());
+      setMaxWordsPerSentenceState(profile.maxWordsPerSentence);
+      localStorage.setItem(STORAGE_KEYS.MAX_WORDS, profile.maxWordsPerSentence.toString());
 
-    aiService.updateProfileDirective(profile.aiDirective, profile.shortTitle);
-  }, []);
+      aiService.updateProfileDirective(profile.aiDirective, profile.shortTitle);
+    },
+    [isColorProfileControlled]
+  );
 
   // Sincronizar clave con servicio IA
   useEffect(() => {
@@ -295,7 +309,35 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
     [userProfile, applyAllProfileParameters, announce]
   );
 
-  // Seleccionar un perfil diagnóstico/funcional (reactiva el control por perfil y aplica sus 10 parámetros)
+  // Activar o desactivar el Control Automático de Color por Perfil de forma independiente
+  const setIsColorProfileControlled = useCallback(
+    (enabled: boolean) => {
+      setIsColorProfileControlledState(enabled);
+      localStorage.setItem(STORAGE_KEYS.COLOR_PROFILE_CONTROL, enabled.toString());
+      if (enabled) {
+        setContrastThemeState(userProfile.recommendedTheme);
+        localStorage.setItem(STORAGE_KEYS.CONTRAST, userProfile.recommendedTheme);
+        document.documentElement.setAttribute('data-theme', userProfile.recommendedTheme);
+        devLogger.info(
+          'Color',
+          `Control automático de color por perfil ACTIVADO (${userProfile.recommendedTheme})`
+        );
+        announce(
+          `Color automático del perfil activado: ${userProfile.shortTitle}.`,
+          'assertive'
+        );
+      } else {
+        devLogger.info('Color', 'Cambio de color MANUAL activado de forma independiente.');
+        announce(
+          'Control manual de color activado. Ahora puedes cambiar el tema de contraste libremente.',
+          'assertive'
+        );
+      }
+    },
+    [userProfile, announce]
+  );
+
+  // Seleccionar un perfil diagnóstico/funcional (reactiva el control por perfil y aplica sus parámetros)
   const selectUserProfile = useCallback(
     (profileId: UserProfileId) => {
       const chosen = getUserProfileById(profileId);
@@ -455,6 +497,8 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
         selectUserProfile,
         isProfileControlEnabled,
         setIsProfileControlEnabled,
+        isColorProfileControlled,
+        setIsColorProfileControlled,
         isProfileModalOpen,
         setIsProfileModalOpen,
         contrastTheme,

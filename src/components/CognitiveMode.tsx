@@ -24,7 +24,6 @@ import { validateEasyRead, summarizeChecks } from '../services/easyReadValidator
 import { ARASAAC_ATTRIBUTION } from '../services/arasaacService';
 import {
   EasyReadStep,
-  CognitiveOutputFormat,
   PictogramPhrase,
   GuidelineCheck
 } from '../types';
@@ -41,7 +40,6 @@ export const CognitiveMode: React.FC = () => {
     setIsSettingsOpen,
     isProfileControlEnabled,
     cognitiveFormat: outputFormat,
-    setCognitiveFormat: setOutputFormat,
     autoSpeak,
     stepByStepFocus,
     maxWordsPerSentence
@@ -84,24 +82,6 @@ export const CognitiveMode: React.FC = () => {
     rate: speechRate,
     onTranscriptChange: (text) => setInputText(text)
   });
-
-  // Cambiar entre apartado Lectura Fácil y apartado Pictogramas ARASAAC
-  const handleSelectFormat = (format: CognitiveOutputFormat) => {
-    if (hapticEnabled) triggerShort();
-    setOutputFormat(format);
-    setErrorMsg(null);
-    if (format === 'easy-read') {
-      announce(
-        'Apartado seleccionado: Lectura Fácil según Norma UNE 153101 y herramienta ATECA.',
-        'polite'
-      );
-    } else {
-      announce(
-        'Apartado seleccionado: Creador con Pictogramas de ARASAAC.',
-        'polite'
-      );
-    }
-  };
 
   // Alternar vista de cámara (con fallback a cámara nativa de Android Chrome)
   const handleToggleCamera = async () => {
@@ -413,52 +393,39 @@ export const CognitiveMode: React.FC = () => {
           </div>
         </div>
 
-        {/* SELECTOR DE APARTADO: Lectura Fácil (UNE + ATECA) vs Pictogramas ARASAAC */}
+        {/* INDICADOR FIJADO DE FORMATO COGNITIVO (Se cambia únicamente por Perfil o en Ajustes) */}
         <div
-          role="tablist"
-          aria-label="Tipo de adaptación cognitiva"
-          className="grid grid-cols-2 gap-3 pt-1"
+          role="status"
+          aria-label="Formato de adaptación cognitiva fijado"
+          className="p-4 rounded-2xl border-4 border-a11y-border bg-a11y-primary text-a11y-primaryText flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md"
         >
-          <button
-            role="tab"
-            aria-selected={outputFormat === 'easy-read'}
-            onClick={() => handleSelectFormat('easy-read')}
-            className={`touch-target min-h-[72px] p-3.5 md:p-4 rounded-2xl border-4 font-black text-left flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 transition-all ${
-              outputFormat === 'easy-read'
-                ? 'bg-a11y-primary text-a11y-primaryText border-a11y-border shadow-lg scale-[1.01]'
-                : 'bg-a11y-bg text-a11y-text border-a11y-border opacity-85 hover:opacity-100'
-            }`}
-          >
-            <FileText className="w-8 h-8 md:w-10 md:h-10 shrink-0" aria-hidden="true" />
-            <div className="text-center sm:text-left">
-              <div className="text-base sm:text-xl md:text-2xl leading-tight">
-                {isMobile ? 'Lectura Fácil' : '1. Lectura Fácil (UNE + ATECA)'}
-              </div>
-              <div className="text-xs sm:text-sm font-bold opacity-90 mt-0.5">
-                {isMobile ? 'Norma UNE / ATECA' : 'Norma UNE 153101:2018 EX y validador lingüístico ATECA'}
-              </div>
+          <div className="flex items-center gap-3.5">
+            {outputFormat === 'easy-read' ? (
+              <FileText className="w-9 h-9 md:w-11 md:h-11 shrink-0" aria-hidden="true" />
+            ) : (
+              <Images className="w-9 h-9 md:w-11 md:h-11 shrink-0" aria-hidden="true" />
+            )}
+            <div>
+              <span className="block text-xs font-black uppercase tracking-wider opacity-90">
+                {isProfileControlEnabled
+                  ? `🔒 Formato Fijado por Perfil (${userProfile.shortTitle}):`
+                  : '🛠️ Formato Fijado en Ajustes Manuales:'}
+              </span>
+              <span className="block text-lg sm:text-xl md:text-2xl font-black leading-tight mt-0.5">
+                {outputFormat === 'easy-read'
+                  ? 'Texto en Lectura Fácil (Norma UNE 153101:2018 EX + ATECA)'
+                  : 'Secuencia Visual con Pictogramas ARASAAC'}
+              </span>
             </div>
-          </button>
+          </div>
 
           <button
-            role="tab"
-            aria-selected={outputFormat === 'pictograms'}
-            onClick={() => handleSelectFormat('pictograms')}
-            className={`touch-target min-h-[72px] p-3.5 md:p-4 rounded-2xl border-4 font-black text-left flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 transition-all ${
-              outputFormat === 'pictograms'
-                ? 'bg-a11y-primary text-a11y-primaryText border-a11y-border shadow-lg scale-[1.01]'
-                : 'bg-a11y-bg text-a11y-text border-a11y-border opacity-85 hover:opacity-100'
-            }`}
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className="touch-target px-4 py-2.5 rounded-xl border-2 border-current bg-black/15 hover:bg-black/25 font-black text-xs sm:text-sm shrink-0"
+            aria-label="Abrir Ajustes para cambiar entre Lectura Fácil y Pictogramas ARASAAC"
           >
-            <Images className="w-8 h-8 md:w-10 md:h-10 shrink-0" aria-hidden="true" />
-            <div className="text-center sm:text-left">
-              <div className="text-base sm:text-xl md:text-2xl leading-tight">
-                {isMobile ? 'Pictogramas' : '2. Pictogramas ARASAAC'}
-              </div>
-              <div className="text-xs sm:text-sm font-bold opacity-90 mt-0.5">
-                {isMobile ? 'Símbolos ARASAAC' : 'Traduce frases o tareas a símbolos visuales oficiales de ARASAAC'}
-              </div>
-            </div>
+            ⚙️ Cambiar en Ajustes
           </button>
         </div>
       </div>
