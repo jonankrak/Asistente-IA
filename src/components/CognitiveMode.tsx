@@ -37,19 +37,16 @@ export const CognitiveMode: React.FC = () => {
     hasApiKey,
     isMobile,
     userProfile,
-    setIsProfileModalOpen
+    setIsProfileModalOpen,
+    setIsSettingsOpen,
+    isProfileControlEnabled,
+    cognitiveFormat: outputFormat,
+    setCognitiveFormat: setOutputFormat,
+    autoSpeak,
+    stepByStepFocus,
+    maxWordsPerSentence
   } = useAccessibility();
   const { triggerShort, triggerSuccess, triggerError } = useHaptics();
-
-  // Selector de apartado: 'easy-read' (UNE 153101 + ATECA) o 'pictograms' (ARASAAC)
-  const [outputFormat, setOutputFormat] = useState<CognitiveOutputFormat>(
-    userProfile.recommendedFormat
-  );
-
-  // Sincronizar formato recomendado cuando cambia el perfil seleccionado
-  useEffect(() => {
-    setOutputFormat(userProfile.recommendedFormat);
-  }, [userProfile]);
 
   const [inputText, setInputText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -232,12 +229,12 @@ export const CognitiveMode: React.FC = () => {
         setSummary(result.summary);
         setSteps(result.steps);
 
-        // Ejecutar validador automático UNE 153101:2018 EX + ATECA
+        // Ejecutar validador automático UNE 153101:2018 EX + ATECA con el límite de palabras activo
         const linesToValidate = [
           result.summary,
           ...result.steps.map((s) => s.instruction)
         ].filter(Boolean);
-        const checks = validateEasyRead(linesToValidate);
+        const checks = validateEasyRead(linesToValidate, maxWordsPerSentence);
         setGuidelineChecks(checks);
 
         setIsLoading(false);
@@ -247,7 +244,9 @@ export const CognitiveMode: React.FC = () => {
           `Adaptación completada. Se generaron ${result.steps.length} pasos en Lectura Fácil.`,
           'assertive'
         );
-        speak(`${result.summary}. Paso 1: ${result.steps[0]?.instruction || ''}`);
+        if (autoSpeak) {
+          speak(`${result.summary}. Paso 1: ${result.steps[0]?.instruction || ''}`);
+        }
       } else {
         announce(
           'Generando secuencia de pictogramas con ARASAAC e Inteligencia Artificial...',
@@ -268,7 +267,9 @@ export const CognitiveMode: React.FC = () => {
           `Pictogramas listos. Se crearon ${result.phrases.length} frases visuales de ARASAAC.`,
           'assertive'
         );
-        speak(`${result.title}. Paso 1: ${result.phrases[0]?.text || ''}`);
+        if (autoSpeak) {
+          speak(`${result.title}. Paso 1: ${result.phrases[0]?.text || ''}`);
+        }
       }
     } catch (err: any) {
       const msg = err.message || 'Error al procesar con IA.';
@@ -342,6 +343,8 @@ export const CognitiveMode: React.FC = () => {
   const completedStepsCount = steps.filter((s) => s.completed).length;
   const completedPhrasesCount = pictoPhrases.filter((p) => p.completed).length;
   const atecaSummary = summarizeChecks(guidelineChecks);
+  const firstPendingStepId = steps.find((s) => !s.completed)?.id;
+  const firstPendingPhraseId = pictoPhrases.find((p) => !p.completed)?.id;
 
   return (
     <div className="w-full flex-1 max-w-4xl mx-auto p-4 md:p-6 space-y-6">
@@ -374,20 +377,40 @@ export const CognitiveMode: React.FC = () => {
               >
                 {userProfile.categoryLabel} — {userProfile.levelLabel}
               </span>
+              <span
+                className={`px-2 py-0.5 rounded-md border text-[11px] font-black uppercase ${
+                  isProfileControlEnabled
+                    ? 'bg-green-950/60 border-green-500 text-green-300'
+                    : 'bg-yellow-950/60 border-yellow-500 text-yellow-300'
+                }`}
+              >
+                {isProfileControlEnabled
+                  ? '🔒 Control Automático por Perfil'
+                  : '🛠️ Modo de Ajuste Manual'}
+              </span>
             </div>
             <p className="text-sm font-bold opacity-90 text-a11y-text">
               {userProfile.description}
             </p>
           </div>
 
-          <button
-            onClick={() => setIsProfileModalOpen(true)}
-            className="touch-target px-4 py-2.5 rounded-xl border-2 border-a11y-border bg-a11y-primary text-a11y-primaryText font-black text-sm flex items-center gap-2 shrink-0 hover:brightness-105"
-            aria-label="Cambiar perfil de apoyo (Tecla P)"
-          >
-            <UserCheck className="w-5 h-5" aria-hidden="true" />
-            <span>Cambiar Perfil</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              onClick={() => setIsProfileModalOpen(true)}
+              className="touch-target px-4 py-2.5 rounded-xl border-2 border-a11y-border bg-a11y-primary text-a11y-primaryText font-black text-sm flex items-center gap-2 hover:brightness-105"
+              aria-label="Cambiar perfil de apoyo (Tecla P)"
+            >
+              <UserCheck className="w-5 h-5" aria-hidden="true" />
+              <span>Cambiar Perfil</span>
+            </button>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="touch-target px-3.5 py-2.5 rounded-xl border-2 border-a11y-border bg-a11y-card text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-xs uppercase"
+              aria-label="Abrir ajustes para cambiar entre control por perfil o ajuste manual"
+            >
+              {isProfileControlEnabled ? 'Ajuste Manual' : 'Ajustes'}
+            </button>
+          </div>
         </div>
 
         {/* SELECTOR DE APARTADO: Lectura Fácil (UNE + ATECA) vs Pictogramas ARASAAC */}
@@ -759,6 +782,7 @@ export const CognitiveMode: React.FC = () => {
           {/* Tarjetas individuales de pasos interactivos (Área táctil amplia >= 64px) */}
           <div className="space-y-4" role="list">
             {steps.map((step) => {
+              const isGuidedActive = stepByStepFocus && step.id === firstPendingStepId;
               return (
                 <div
                   key={step.id}
@@ -766,6 +790,10 @@ export const CognitiveMode: React.FC = () => {
                   className={`p-5 rounded-3xl border-4 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
                     step.completed
                       ? 'bg-green-950/30 border-green-500 text-green-200 opacity-80'
+                      : isGuidedActive
+                      ? 'bg-a11y-card border-a11y-primary ring-4 ring-a11y-primary/50 text-a11y-text shadow-xl scale-[1.01]'
+                      : stepByStepFocus
+                      ? 'bg-a11y-card border-a11y-border text-a11y-text opacity-60'
                       : 'bg-a11y-card border-a11y-border text-a11y-text'
                   }`}
                 >
@@ -786,13 +814,18 @@ export const CognitiveMode: React.FC = () => {
 
                   {/* Contenido del paso con Emoji y Texto de una sola idea por línea */}
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-3xl" aria-hidden="true">
                         {step.emoji}
                       </span>
                       <span className="text-xl font-black text-a11y-primary">
                         PASO {step.stepNumber}
                       </span>
+                      {isGuidedActive && (
+                        <span className="px-2.5 py-0.5 rounded-lg bg-a11y-primary text-a11y-primaryText text-xs font-black uppercase">
+                          👉 PASO ACTUAL RECOMENDADO (Modo Guiado)
+                        </span>
+                      )}
                     </div>
                     <p
                       className={`text-xl md:text-2xl font-black leading-snug ${
@@ -855,13 +888,19 @@ export const CognitiveMode: React.FC = () => {
 
           {/* Tarjetas de frases con secuencias de pictogramas ARASAAC */}
           <div className="space-y-6" role="list">
-            {pictoPhrases.map((phrase) => (
+            {pictoPhrases.map((phrase) => {
+              const isGuidedActive = stepByStepFocus && phrase.id === firstPendingPhraseId;
+              return (
               <div
                 key={phrase.id}
                 role="listitem"
                 className={`p-5 rounded-3xl border-4 transition-all space-y-4 ${
                   phrase.completed
                     ? 'bg-green-950/30 border-green-500 text-green-200 opacity-85'
+                    : isGuidedActive
+                    ? 'bg-a11y-card border-a11y-primary ring-4 ring-a11y-primary/50 text-a11y-text shadow-xl scale-[1.01]'
+                    : stepByStepFocus
+                    ? 'bg-a11y-card border-a11y-border text-a11y-text opacity-60'
                     : 'bg-a11y-card border-a11y-border text-a11y-text'
                 }`}
               >
@@ -883,9 +922,16 @@ export const CognitiveMode: React.FC = () => {
                     </button>
 
                     <div>
-                      <span className="text-base font-black text-a11y-primary uppercase tracking-wider">
-                        PASO {phrase.stepNumber}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-base font-black text-a11y-primary uppercase tracking-wider">
+                          PASO {phrase.stepNumber}
+                        </span>
+                        {isGuidedActive && (
+                          <span className="px-2.5 py-0.5 rounded-lg bg-a11y-primary text-a11y-primaryText text-xs font-black uppercase">
+                            👉 PASO ACTUAL RECOMENDADO (Modo Guiado)
+                          </span>
+                        )}
+                      </div>
                       <p
                         className={`text-xl md:text-2xl font-black leading-snug ${
                           phrase.completed ? 'line-through opacity-75' : ''
@@ -944,7 +990,8 @@ export const CognitiveMode: React.FC = () => {
                   ))}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Atribución oficial obligatoria CC BY-NC-SA 4.0 de ARASAAC */}

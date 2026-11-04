@@ -30,10 +30,14 @@ export interface UserProfileOption {
   badgeColor: string;
   recommendedMode: AssistanceMode;
   recommendedFormat: CognitiveOutputFormat;
+  recommendedTheme: ContrastTheme;
   recommendedFontSize: FontSize;
   recommendedSpeechRate: number;
+  recommendedAutoSpeak: boolean;
+  recommendedHaptic: boolean;
   dyslexiaFriendly: boolean;
   stepByStepFocus: boolean;
+  maxWordsPerSentence: number;
   aiDirective: string;
 }
 

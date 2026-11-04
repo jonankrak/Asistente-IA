@@ -7,7 +7,7 @@ import { useAccessibility } from '../context/AccessibilityContext';
 import { aiService } from '../services/aiService';
 
 export const VisualMode: React.FC = () => {
-  const { announce, speechRate, hapticEnabled, hasApiKey, setIsSettingsOpen } = useAccessibility();
+  const { announce, speechRate, hapticEnabled, hasApiKey, setIsSettingsOpen, autoSpeak } = useAccessibility();
   const { triggerShort, triggerSuccess, triggerError, triggerListening } = useHaptics();
 
   const {
@@ -94,13 +94,17 @@ export const VisualMode: React.FC = () => {
     try {
       const responseText = await aiService.describeVisualScene(base64Img, queryToUse || undefined);
       setDescription(responseText);
-      setVisualState('speaking');
       if (hapticEnabled) triggerSuccess();
 
       announce(`Descripción: ${responseText}`, 'assertive');
-      speak(responseText, speechRate, () => {
+      if (autoSpeak) {
+        setVisualState('speaking');
+        speak(responseText, speechRate, () => {
+          setVisualState('idle');
+        });
+      } else {
         setVisualState('idle');
-      });
+      }
     } catch (err: any) {
       const errTxt = err.message || 'Error al comunicarse con la IA Gemini.';
       setErrorMessage(errTxt);

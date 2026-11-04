@@ -69,22 +69,24 @@ function preview(list: string[], max = 5): string {
   return u.slice(0, max).map(w => `"${w}"`).join(', ') + (u.length > max ? ` (+${u.length - max})` : '');
 }
 
-export function validateEasyRead(lines: string[]): GuidelineCheck[] {
+export function validateEasyRead(lines: string[], customMaxWords?: number): GuidelineCheck[] {
   const fullText = lines.join('\n');
   const sentences = lines.flatMap(splitSentences);
   const checks: GuidelineCheck[] = [];
+  const maxWordsTarget = customMaxWords || MAX_WORDS_WARNING;
+  const maxWordsHard = Math.max(maxWordsTarget + 4, MAX_WORDS_ERROR);
 
-  // 1. Longitud de las frases (UNE 153101 EX: frases cortas, una idea por frase)
-  const longSentences = sentences.filter(s => countWords(s) > MAX_WORDS_WARNING);
-  const veryLong = sentences.filter(s => countWords(s) > MAX_WORDS_ERROR);
+  // 1. Longitud de las frases (UNE 153101 EX + ajuste del perfil)
+  const longSentences = sentences.filter(s => countWords(s) > maxWordsTarget);
+  const veryLong = sentences.filter(s => countWords(s) > maxWordsHard);
   checks.push({
     id: 'sentence-length',
-    rule: `Frases cortas (máx. ${MAX_WORDS_WARNING} palabras recomendado)`,
+    rule: `Frases cortas (máx. ${maxWordsTarget} palabras según perfil/UNE)`,
     severity: veryLong.length > 0 ? 'error' : longSentences.length > 0 ? 'warning' : 'ok',
     detail:
       longSentences.length === 0
-        ? `Todas las frases (${sentences.length}) son cortas.`
-        : `${longSentences.length} frase(s) demasiado larga(s). Ej.: "${longSentences[0].slice(0, 80)}..."`
+        ? `Todas las frases (${sentences.length}) cumplen el máximo de ${maxWordsTarget} palabras.`
+        : `${longSentences.length} frase(s) superan las ${maxWordsTarget} palabras. Ej.: "${longSentences[0].slice(0, 80)}..."`
   });
 
   // 2. Una sola idea por frase (exceso de comas / subordinadas)

@@ -5,7 +5,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
     id: 'di',
     title: 'Discapacidad Intelectual',
     emoji: '🧠',
-    subtitle: 'Adaptación según autonomía personal, razonamiento conceptual y nivel de lectoescritura',
+    subtitle: 'Adaptación integral de autonomía, razonamiento conceptual, lectoescritura y apoyo visual',
     options: [
       {
         id: 'di-leve',
@@ -18,10 +18,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
+        recommendedTheme: 'default',
         recommendedFontSize: 'large',
         recommendedSpeechRate: 0.95,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: true,
         dyslexiaFriendly: false,
         stepByStepFocus: false,
+        maxWordsPerSentence: 12,
         aiDirective:
           'PERFIL ACTIVO: Discapacidad Intelectual Leve. El usuario tiene lectoescritura básica funcional y comprende conceptos concretos, pero necesita apoyo en ideas abstractas. Convierte cualquier concepto abstracto en ejemplos concretos de la vida cotidiana, usa vocabulario frecuente y frases cortas de hasta 12 palabras.'
       },
@@ -36,10 +40,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
+        recommendedTheme: 'dark-high',
         recommendedFontSize: 'extralarge',
         recommendedSpeechRate: 0.85,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: true,
         dyslexiaFriendly: false,
         stepByStepFocus: true,
+        maxWordsPerSentence: 8,
         aiDirective:
           'PERFIL ACTIVO: Discapacidad Intelectual Moderada. El usuario presenta dificultades notables en comunicación y razonamiento conceptual y precisa nivel muy inicial con apoyo gráfico explícito. Usa frases de máximo 6 a 8 palabras, palabras de uso muy básico y cotidiano (sujeto + verbo + objeto directo) y apoyo visual directo.'
       },
@@ -54,10 +62,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
+        recommendedTheme: 'yellow-black',
         recommendedFontSize: 'extralarge',
-        recommendedSpeechRate: 0.8,
+        recommendedSpeechRate: 0.75,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: true,
         dyslexiaFriendly: false,
         stepByStepFocus: true,
+        maxWordsPerSentence: 5,
         aiDirective:
           'PERFIL ACTIVO: Discapacidad Intelectual Grave / Profunda. El usuario requiere Sistemas Aumentativos y Alternativos de Comunicación (SAAC / Pictogramas ARASAAC) en lugar de texto estándar. Reduce cada paso a 2-4 conceptos clave ultra básicos (ej. "Beber agua", "Lavar manos", "Pedir ayuda") con verbos y sustantivos muy concretos.'
       }
@@ -67,7 +79,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
     id: 'tea',
     title: 'Trastorno del Espectro Autista (TEA)',
     emoji: '🧩',
-    subtitle: 'Adaptación según necesidad de apoyo en comunicación social, literalidad y flexibilidad cognitiva',
+    subtitle: 'Adaptación en comunicación social, lenguaje 100% literal, predictibilidad y confort sensorial',
     options: [
       {
         id: 'tea-grado1',
@@ -80,10 +92,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
+        recommendedTheme: 'default',
         recommendedFontSize: 'large',
         recommendedSpeechRate: 1.0,
+        recommendedAutoSpeak: false,
+        recommendedHaptic: false,
         dyslexiaFriendly: false,
         stepByStepFocus: false,
+        maxWordsPerSentence: 14,
         aiDirective:
           'PERFIL ACTIVO: TEA Grado 1 (Necesita ayuda). El usuario se comunica con oraciones completas pero tiene dificultad con el lenguaje figurado y el contexto implícito. Usa lenguaje 100% literal, explícito y predecible. Explica de forma explícita cualquier norma social o intención implícita, evitando dobles sentidos, ironías, modismos o metáforas.'
       },
@@ -98,10 +114,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
+        recommendedTheme: 'default',
         recommendedFontSize: 'extralarge',
         recommendedSpeechRate: 0.9,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: false,
         dyslexiaFriendly: false,
         stepByStepFocus: true,
+        maxWordsPerSentence: 7,
         aiDirective:
           'PERFIL ACTIVO: TEA Grado 2 (Necesita ayuda notable). Comunicación verbal limitada a frases sencillas y alta rigidez cognitiva. Estructura la información como una rutina secuencial muy predecible y ordenada ("Primero...", "Después...", "Por último..."), con frases muy cortas (máximo 7 palabras), sin ambigüedades ni cambios imprevistos.'
       },
@@ -116,10 +136,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
+        recommendedTheme: 'dark-high',
         recommendedFontSize: 'extralarge',
         recommendedSpeechRate: 0.8,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: false,
         dyslexiaFriendly: false,
         stepByStepFocus: true,
+        maxWordsPerSentence: 4,
         aiDirective:
           'PERFIL ACTIVO: TEA Grado 3 (Necesita ayuda muy notable). Comunicación verbal mínima o ausente; requiere apoyo constante y secuencias pictográficas muy elementales. Usa consignas de 2 a 4 palabras altamente visuales y concretas (acción + objeto), ideales para tableros de pictogramas ARASAAC y comunicador CAA.'
       }
@@ -129,7 +153,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
     id: 'dislexia',
     title: 'Trastornos Específicos del Aprendizaje (Dislexia / Lectoescritura)',
     emoji: '📖',
-    subtitle: 'Adaptación en decodificación lectora, fluidez, espaciado tipográfico y apoyo fonológico/audio',
+    subtitle: 'Adaptación en decodificación lectora, fluidez, tipografía espaciada y apoyo fonológico por voz',
     options: [
       {
         id: 'dislexia-leve',
@@ -142,10 +166,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
+        recommendedTheme: 'default',
         recommendedFontSize: 'large',
         recommendedSpeechRate: 0.95,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: true,
         dyslexiaFriendly: true,
         stepByStepFocus: false,
+        maxWordsPerSentence: 12,
         aiDirective:
           'PERFIL ACTIVO: Dislexia / Trastorno de Lectoescritura Leve. Evita palabras largas o trabadas difíciles de decodificar, usa frases bien puntuadas de longitud moderada (máx. 12 palabras) y destaca claramente la idea principal de cada paso.'
       },
@@ -160,10 +188,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
+        recommendedTheme: 'white-black',
         recommendedFontSize: 'extralarge',
         recommendedSpeechRate: 0.85,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: true,
         dyslexiaFriendly: true,
-        stepByStepFocus: false,
+        stepByStepFocus: true,
+        maxWordsPerSentence: 10,
         aiDirective:
           'PERFIL ACTIVO: Dislexia / Trastorno de Lectoescritura Moderado. El usuario tiene dificultades marcadas en fluidez y comprensión lectora. Usa exclusivamente palabras cortas y transparentes (máximo 3-4 sílabas), evita palabras visual o fonéticamente parecidas que generen confusión, y redacta frases muy breves (máximo 10 palabras) pensadas para ser escuchadas con apoyo de voz.'
       },
@@ -178,10 +210,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
+        recommendedTheme: 'yellow-black',
         recommendedFontSize: 'extralarge',
         recommendedSpeechRate: 0.8,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: true,
         dyslexiaFriendly: true,
         stepByStepFocus: true,
+        maxWordsPerSentence: 7,
         aiDirective:
           'PERFIL ACTIVO: Dislexia / Trastorno de Lectoescritura Grave. Gran dificultad para la decodificación automatizada; requiere apoyo auditivo (TTS) y pictográfico intensivo. Usa frases mínimas (4 a 7 palabras) con vocabulario bisílabo o trisílabo muy sencillo y apoyo directo de pictogramas y lectura en voz alta.'
       }
@@ -191,7 +227,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
     id: 'tdah',
     title: 'TDAH (Déficit de Atención e Hiperactividad)',
     emoji: '⚡',
-    subtitle: 'Adaptación mediante fragmentación de tareas, control de distractores y pausas guiadas',
+    subtitle: 'Adaptación mediante fragmentación de tareas, foco en el paso activo y pausas guiadas',
     options: [
       {
         id: 'tdah-leve',
@@ -204,10 +240,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
+        recommendedTheme: 'default',
         recommendedFontSize: 'large',
         recommendedSpeechRate: 1.0,
+        recommendedAutoSpeak: false,
+        recommendedHaptic: true,
         dyslexiaFriendly: false,
         stepByStepFocus: false,
+        maxWordsPerSentence: 12,
         aiDirective:
           'PERFIL ACTIVO: TDAH Leve. Organiza la información en pasos claros, directos y accionables, comenzando cada paso con un verbo de acción para mantener el foco y evitar que se salte detalles por impulsividad.'
       },
@@ -222,10 +262,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
+        recommendedTheme: 'dark-high',
         recommendedFontSize: 'large',
         recommendedSpeechRate: 1.0,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: true,
         dyslexiaFriendly: false,
         stepByStepFocus: true,
+        maxWordsPerSentence: 9,
         aiDirective:
           'PERFIL ACTIVO: TDAH Moderado. El usuario tiene dificultad para mantener la atención en textos largos. Fragmenta el contenido en micro-tareas muy concretas y breves (máximo 8-10 palabras por paso), eliminando todo texto de relleno y usando un formato altamente estructurado.'
       },
@@ -240,10 +284,14 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
+        recommendedTheme: 'dark-high',
         recommendedFontSize: 'extralarge',
         recommendedSpeechRate: 0.95,
+        recommendedAutoSpeak: true,
+        recommendedHaptic: true,
         dyslexiaFriendly: false,
         stepByStepFocus: true,
+        maxWordsPerSentence: 6,
         aiDirective:
           'PERFIL ACTIVO: TDAH Grave. El usuario se distrae con gran facilidad y exige tareas ultra breves, muy guiadas y con pausas de descanso. Divide la actividad en micro-pasos de máximo 6 palabras cada uno e INTERCALA explícitamente pasos cortos de pausa/descanso y autoverificación cada 2 o 3 acciones (ej. "⏸️ Pausa breve: respira hondo y descansa 30 segundos antes de seguir").'
       }

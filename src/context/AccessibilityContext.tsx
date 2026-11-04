@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { AssistanceMode, ContrastTheme, FontSize, UserProfileId, UserProfileOption } from '../types';
+import {
+  AssistanceMode,
+  CognitiveOutputFormat,
+  ContrastTheme,
+  FontSize,
+  UserProfileId,
+  UserProfileOption
+} from '../types';
 import { getUserProfileById } from '../data/userProfiles';
 import { aiService } from '../services/aiService';
 import { devLogger } from '../services/loggerService';
@@ -14,10 +21,14 @@ interface Announcement {
 interface AccessibilityContextType {
   mode: AssistanceMode;
   setMode: (mode: AssistanceMode) => void;
+  cognitiveFormat: CognitiveOutputFormat;
+  setCognitiveFormat: (format: CognitiveOutputFormat) => void;
   isMobile: boolean;
   toggleDeviceMode: () => void;
   userProfile: UserProfileOption;
   selectUserProfile: (profileId: UserProfileId) => void;
+  isProfileControlEnabled: boolean;
+  setIsProfileControlEnabled: (enabled: boolean) => void;
   isProfileModalOpen: boolean;
   setIsProfileModalOpen: (open: boolean) => void;
   contrastTheme: ContrastTheme;
@@ -26,8 +37,16 @@ interface AccessibilityContextType {
   setFontSize: (size: FontSize) => void;
   speechRate: number;
   setSpeechRate: (rate: number) => void;
+  autoSpeak: boolean;
+  setAutoSpeak: (enabled: boolean) => void;
   hapticEnabled: boolean;
   setHapticEnabled: (enabled: boolean) => void;
+  dyslexiaFriendly: boolean;
+  setDyslexiaFriendly: (enabled: boolean) => void;
+  stepByStepFocus: boolean;
+  setStepByStepFocus: (enabled: boolean) => void;
+  maxWordsPerSentence: number;
+  setMaxWordsPerSentence: (maxWords: number) => void;
   apiKey: string;
   setApiKey: (key: string) => void;
   hasApiKey: boolean;
@@ -42,13 +61,19 @@ interface AccessibilityContextType {
 const AccessibilityContext = createContext<AccessibilityContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
+  PROFILE_CONTROL: 'a11y_profile_control_enabled',
+  USER_PROFILE: 'a11y_user_profile_id',
+  MODE: 'a11y_active_mode',
+  COGNITIVE_FORMAT: 'a11y_cognitive_format',
   CONTRAST: 'a11y_contrast_theme',
   FONT_SIZE: 'a11y_font_size',
   SPEECH_RATE: 'a11y_speech_rate',
+  AUTO_SPEAK: 'a11y_auto_speak',
   HAPTIC: 'a11y_haptic_enabled',
-  API_KEY: 'a11y_gemini_api_key',
-  MODE: 'a11y_active_mode',
-  USER_PROFILE: 'a11y_user_profile_id',
+  DYSLEXIA: 'a11y_dyslexia_friendly',
+  STEP_BY_STEP: 'a11y_step_by_step_focus',
+  MAX_WORDS: 'a11y_max_words_sentence',
+  API_KEY: 'a11y_gemini_api_key'
 };
 
 function detectIsMobileDevice(): boolean {
@@ -57,7 +82,6 @@ function detectIsMobileDevice(): boolean {
   const platform = (navigator as any).platform || '';
   const uaDataMobile = Boolean((navigator as any).userAgentData?.mobile);
 
-  // Detecta Android (incluso si Chrome Android tiene activado "Sitio para ordenador" donde reporta Linux armv8l/aarch64 con pantalla táctil)
   const isAndroidOrIOS =
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua) ||
     (/Linux/i.test(platform) && navigator.maxTouchPoints > 1);
@@ -75,7 +99,7 @@ function detectIsMobileDevice(): boolean {
 export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { triggerShort, triggerSuccess } = useHaptics();
 
-  // Detección automática de Móvil vs Ordenador (PC), con posibilidad de alternar manualmente
+  // Detección automática de Móvil vs Ordenador (PC)
   const [manualDeviceOverride, setManualDeviceOverride] = useState<'mobile' | 'desktop' | null>(null);
   const [autoDetectedMobile, setAutoDetectedMobile] = useState<boolean>(() => detectIsMobileDevice());
 
@@ -90,12 +114,11 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   const isMobile =
     manualDeviceOverride !== null ? manualDeviceOverride === 'mobile' : autoDetectedMobile;
 
-  useEffect(() => {
-    devLogger.info(
-      'Dispositivo',
-      `Interfaz adaptada a: ${isMobile ? 'Teléfono Móvil (Táctil)' : 'Ordenador (Escritorio)'}`
-    );
-  }, [isMobile]);
+  // Control Automático por Perfil vs Ajuste Manual
+  const [isProfileControlEnabled, setIsProfileControlEnabledState] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PROFILE_CONTROL);
+    return saved !== null ? saved === 'true' : true;
+  });
 
   // Perfil de usuario inicial
   const [userProfile, setUserProfileState] = useState<UserProfileOption>(() => {
@@ -108,30 +131,59 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   // Mostrar selector de perfil al iniciar la aplicación
   const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(true);
 
-  // Modo inicial guardado o cognitive por defecto
+  // Estados de todos los parámetros de la aplicación
   const [mode, setModeState] = useState<AssistanceMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.MODE) as AssistanceMode;
-    return saved && ['visual', 'cognitive', 'auditory'].includes(saved) ? saved : 'cognitive';
+    return saved && ['visual', 'cognitive', 'auditory'].includes(saved)
+      ? saved
+      : userProfile.recommendedMode;
+  });
+
+  const [cognitiveFormat, setCognitiveFormatState] = useState<CognitiveOutputFormat>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.COGNITIVE_FORMAT) as CognitiveOutputFormat;
+    return saved && ['easy-read', 'pictograms'].includes(saved)
+      ? saved
+      : userProfile.recommendedFormat;
   });
 
   const [contrastTheme, setContrastThemeState] = useState<ContrastTheme>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CONTRAST) as ContrastTheme;
-    return saved || 'yellow-black';
+    return saved || userProfile.recommendedTheme;
   });
 
   const [fontSize, setFontSizeState] = useState<FontSize>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.FONT_SIZE) as FontSize;
-    return saved || 'large';
+    return saved || userProfile.recommendedFontSize;
   });
 
   const [speechRate, setSpeechRateState] = useState<number>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SPEECH_RATE);
-    return saved ? parseFloat(saved) : 1.0;
+    return saved ? parseFloat(saved) : userProfile.recommendedSpeechRate;
+  });
+
+  const [autoSpeak, setAutoSpeakState] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.AUTO_SPEAK);
+    return saved !== null ? saved === 'true' : userProfile.recommendedAutoSpeak;
   });
 
   const [hapticEnabled, setHapticEnabledState] = useState<boolean>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.HAPTIC);
-    return saved !== null ? saved === 'true' : true;
+    return saved !== null ? saved === 'true' : userProfile.recommendedHaptic;
+  });
+
+  const [dyslexiaFriendly, setDyslexiaFriendlyState] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.DYSLEXIA);
+    return saved !== null ? saved === 'true' : userProfile.dyslexiaFriendly;
+  });
+
+  const [stepByStepFocus, setStepByStepFocusState] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.STEP_BY_STEP);
+    return saved !== null ? saved === 'true' : userProfile.stepByStepFocus;
+  });
+
+  const [maxWordsPerSentence, setMaxWordsPerSentenceState] = useState<number>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.MAX_WORDS);
+    return saved ? parseInt(saved, 10) : userProfile.maxWordsPerSentence;
   });
 
   const [apiKey, setApiKeyState] = useState<string>(() => {
@@ -158,24 +210,117 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isDevConsoleOpen, setIsDevConsoleOpen] = useState<boolean>(false);
 
-  // Sincronizar clave y perfil con servicio IA
-  useEffect(() => {
-    aiService.updateApiKey(apiKey);
-  }, [apiKey]);
-
-  useEffect(() => {
-    aiService.updateProfileDirective(userProfile.aiDirective, userProfile.shortTitle);
-    document.documentElement.setAttribute(
-      'data-dyslexia',
-      userProfile.dyslexiaFriendly ? 'true' : 'false'
-    );
-  }, [userProfile]);
-
   // Anuncios para lectores de pantalla y feedback accesible
   const announce = useCallback((message: string, priority: 'assertive' | 'polite' = 'assertive') => {
     const id = `announce-${Date.now()}-${Math.random()}`;
     setAnnouncements((prev) => [...prev.slice(-3), { id, message, priority }]);
   }, []);
+
+  // Aplicar todos los parámetros de un perfil a la aplicación
+  const applyAllProfileParameters = useCallback((profile: UserProfileOption) => {
+    setModeState(profile.recommendedMode);
+    localStorage.setItem(STORAGE_KEYS.MODE, profile.recommendedMode);
+
+    setCognitiveFormatState(profile.recommendedFormat);
+    localStorage.setItem(STORAGE_KEYS.COGNITIVE_FORMAT, profile.recommendedFormat);
+
+    setContrastThemeState(profile.recommendedTheme);
+    localStorage.setItem(STORAGE_KEYS.CONTRAST, profile.recommendedTheme);
+    document.documentElement.setAttribute('data-theme', profile.recommendedTheme);
+
+    setFontSizeState(profile.recommendedFontSize);
+    localStorage.setItem(STORAGE_KEYS.FONT_SIZE, profile.recommendedFontSize);
+    document.documentElement.setAttribute('data-font-size', profile.recommendedFontSize);
+
+    setSpeechRateState(profile.recommendedSpeechRate);
+    localStorage.setItem(STORAGE_KEYS.SPEECH_RATE, profile.recommendedSpeechRate.toString());
+
+    setAutoSpeakState(profile.recommendedAutoSpeak);
+    localStorage.setItem(STORAGE_KEYS.AUTO_SPEAK, profile.recommendedAutoSpeak.toString());
+
+    setHapticEnabledState(profile.recommendedHaptic);
+    localStorage.setItem(STORAGE_KEYS.HAPTIC, profile.recommendedHaptic.toString());
+
+    setDyslexiaFriendlyState(profile.dyslexiaFriendly);
+    localStorage.setItem(STORAGE_KEYS.DYSLEXIA, profile.dyslexiaFriendly.toString());
+    document.documentElement.setAttribute(
+      'data-dyslexia',
+      profile.dyslexiaFriendly ? 'true' : 'false'
+    );
+
+    setStepByStepFocusState(profile.stepByStepFocus);
+    localStorage.setItem(STORAGE_KEYS.STEP_BY_STEP, profile.stepByStepFocus.toString());
+
+    setMaxWordsPerSentenceState(profile.maxWordsPerSentence);
+    localStorage.setItem(STORAGE_KEYS.MAX_WORDS, profile.maxWordsPerSentence.toString());
+
+    aiService.updateProfileDirective(profile.aiDirective, profile.shortTitle);
+  }, []);
+
+  // Sincronizar clave con servicio IA
+  useEffect(() => {
+    aiService.updateApiKey(apiKey);
+  }, [apiKey]);
+
+  // Aplicar atributos DOM de tema, tamaño de letra y dislexia
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', contrastTheme);
+    document.documentElement.setAttribute('data-font-size', fontSize);
+    document.documentElement.setAttribute('data-dyslexia', dyslexiaFriendly ? 'true' : 'false');
+  }, [contrastTheme, fontSize, dyslexiaFriendly]);
+
+  // Activar o desactivar el Control Automático por Perfil desde Ajustes
+  const setIsProfileControlEnabled = useCallback(
+    (enabled: boolean) => {
+      setIsProfileControlEnabledState(enabled);
+      localStorage.setItem(STORAGE_KEYS.PROFILE_CONTROL, enabled.toString());
+      if (enabled) {
+        applyAllProfileParameters(userProfile);
+        devLogger.info(
+          'Perfil',
+          `Control automático por perfil ACTIVADO (${userProfile.shortTitle})`
+        );
+        announce(
+          `Control automático por perfil activado. Todos los parámetros se han sincronizado con ${userProfile.shortTitle}.`,
+          'assertive'
+        );
+      } else {
+        devLogger.info('Perfil', 'Modo de AJUSTE MANUAL activado. Todos los controles desbloqueados.');
+        announce(
+          'Modo de ajuste manual activado. Ahora puedes modificar todos los parámetros libremente.',
+          'assertive'
+        );
+      }
+    },
+    [userProfile, applyAllProfileParameters, announce]
+  );
+
+  // Seleccionar un perfil diagnóstico/funcional (reactiva el control por perfil y aplica sus 10 parámetros)
+  const selectUserProfile = useCallback(
+    (profileId: UserProfileId) => {
+      const chosen = getUserProfileById(profileId);
+      setUserProfileState(chosen);
+      localStorage.setItem(STORAGE_KEYS.USER_PROFILE, chosen.id);
+
+      // Al escoger un perfil, activar el control por perfil y aplicar todos sus parámetros
+      setIsProfileControlEnabledState(true);
+      localStorage.setItem(STORAGE_KEYS.PROFILE_CONTROL, 'true');
+      applyAllProfileParameters(chosen);
+
+      setIsProfileModalOpen(false);
+      if (chosen.recommendedHaptic) triggerSuccess();
+
+      devLogger.success(
+        'Perfil',
+        `Perfil aplicado con todos sus parámetros: ${chosen.categoryLabel} - ${chosen.levelLabel}`
+      );
+      announce(
+        `Perfil activado: ${chosen.categoryLabel}, nivel ${chosen.levelLabel}. Se han configurado automáticamente tema, letra, voz, pictogramas y pautas IA.`,
+        'assertive'
+      );
+    },
+    [applyAllProfileParameters, triggerSuccess, announce]
+  );
 
   const toggleDeviceMode = useCallback(() => {
     const next = isMobile ? 'desktop' : 'mobile';
@@ -206,6 +351,11 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
     [hapticEnabled, triggerShort, announce]
   );
 
+  const setCognitiveFormat = useCallback((format: CognitiveOutputFormat) => {
+    setCognitiveFormatState(format);
+    localStorage.setItem(STORAGE_KEYS.COGNITIVE_FORMAT, format);
+  }, []);
+
   const setContrastTheme = useCallback((theme: ContrastTheme) => {
     setContrastThemeState(theme);
     localStorage.setItem(STORAGE_KEYS.CONTRAST, theme);
@@ -223,9 +373,30 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.SPEECH_RATE, rate.toString());
   }, []);
 
+  const setAutoSpeak = useCallback((enabled: boolean) => {
+    setAutoSpeakState(enabled);
+    localStorage.setItem(STORAGE_KEYS.AUTO_SPEAK, enabled.toString());
+  }, []);
+
   const setHapticEnabled = useCallback((enabled: boolean) => {
     setHapticEnabledState(enabled);
     localStorage.setItem(STORAGE_KEYS.HAPTIC, enabled.toString());
+  }, []);
+
+  const setDyslexiaFriendly = useCallback((enabled: boolean) => {
+    setDyslexiaFriendlyState(enabled);
+    localStorage.setItem(STORAGE_KEYS.DYSLEXIA, enabled.toString());
+    document.documentElement.setAttribute('data-dyslexia', enabled ? 'true' : 'false');
+  }, []);
+
+  const setStepByStepFocus = useCallback((enabled: boolean) => {
+    setStepByStepFocusState(enabled);
+    localStorage.setItem(STORAGE_KEYS.STEP_BY_STEP, enabled.toString());
+  }, []);
+
+  const setMaxWordsPerSentence = useCallback((maxWords: number) => {
+    setMaxWordsPerSentenceState(maxWords);
+    localStorage.setItem(STORAGE_KEYS.MAX_WORDS, maxWords.toString());
   }, []);
 
   const setApiKey = useCallback((key: string) => {
@@ -233,40 +404,6 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.API_KEY, key);
     aiService.updateApiKey(key);
   }, []);
-
-  // Seleccionar un perfil diagnóstico/funcional y aplicar sus ajustes recomendados
-  const selectUserProfile = useCallback(
-    (profileId: UserProfileId) => {
-      const chosen = getUserProfileById(profileId);
-      setUserProfileState(chosen);
-      localStorage.setItem(STORAGE_KEYS.USER_PROFILE, chosen.id);
-
-      setModeState(chosen.recommendedMode);
-      localStorage.setItem(STORAGE_KEYS.MODE, chosen.recommendedMode);
-      setFontSize(chosen.recommendedFontSize);
-      setSpeechRate(chosen.recommendedSpeechRate);
-
-      aiService.updateProfileDirective(chosen.aiDirective, chosen.shortTitle);
-      setIsProfileModalOpen(false);
-
-      if (hapticEnabled) triggerSuccess();
-      devLogger.success(
-        'Perfil',
-        `Perfil seleccionado: ${chosen.categoryLabel} - ${chosen.levelLabel}`
-      );
-      announce(
-        `Perfil activado: ${chosen.categoryLabel}, nivel ${chosen.levelLabel}. Interfaz e Inteligencia Artificial adaptadas.`,
-        'assertive'
-      );
-    },
-    [hapticEnabled, triggerSuccess, setFontSize, setSpeechRate, announce]
-  );
-
-  // Aplicar clases y atributos al cargar
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', contrastTheme);
-    document.documentElement.setAttribute('data-font-size', fontSize);
-  }, [contrastTheme, fontSize]);
 
   // Atajos globales de teclado para Accesibilidad
   useEffect(() => {
@@ -310,10 +447,14 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       value={{
         mode,
         setMode,
+        cognitiveFormat,
+        setCognitiveFormat,
         isMobile,
         toggleDeviceMode,
         userProfile,
         selectUserProfile,
+        isProfileControlEnabled,
+        setIsProfileControlEnabled,
         isProfileModalOpen,
         setIsProfileModalOpen,
         contrastTheme,
@@ -322,8 +463,16 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
         setFontSize,
         speechRate,
         setSpeechRate,
+        autoSpeak,
+        setAutoSpeak,
         hapticEnabled,
         setHapticEnabled,
+        dyslexiaFriendly,
+        setDyslexiaFriendly,
+        stepByStepFocus,
+        setStepByStepFocus,
+        maxWordsPerSentence,
+        setMaxWordsPerSentence,
         apiKey,
         setApiKey,
         hasApiKey: Boolean(apiKey && apiKey.length > 5),
@@ -332,7 +481,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
         isSettingsOpen,
         setIsSettingsOpen,
         isDevConsoleOpen,
-        setIsDevConsoleOpen,
+        setIsDevConsoleOpen
       }}
     >
       {children}

@@ -9,7 +9,9 @@ export const ProfileSelectorModal: React.FC = () => {
     userProfile,
     selectUserProfile,
     isProfileModalOpen,
-    setIsProfileModalOpen
+    setIsProfileModalOpen,
+    setIsSettingsOpen,
+    setIsProfileControlEnabled
   } = useAccessibility();
 
   const [activeCategory, setActiveCategory] = useState<ProfileCategoryId>(
@@ -158,7 +160,15 @@ export const ProfileSelectorModal: React.FC = () => {
 
                       <span className="px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-500 text-zinc-200 flex items-center gap-1">
                         <Volume2 className="w-3.5 h-3.5" aria-hidden="true" />
-                        Voz {option.recommendedSpeechRate}x
+                        Voz {option.recommendedSpeechRate}x {option.recommendedAutoSpeak ? '(Auto)' : '(Manual)'}
+                      </span>
+
+                      <span className="px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-500 text-zinc-200">
+                        Letra: {option.recommendedFontSize === 'extralarge' ? 'Extra Grande' : option.recommendedFontSize === 'large' ? 'Grande' : 'Normal'}
+                      </span>
+
+                      <span className="px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-500 text-zinc-200">
+                        Máx. {option.maxWordsPerSentence} pal./frase
                       </span>
 
                       {option.dyslexiaFriendly && (
@@ -169,7 +179,7 @@ export const ProfileSelectorModal: React.FC = () => {
 
                       {option.stepByStepFocus && (
                         <span className="px-2.5 py-1 rounded-lg bg-amber-950/60 border border-amber-400 text-amber-200">
-                          Guía / Micro-pasos
+                          Guía Paso a Paso
                         </span>
                       )}
                     </div>
@@ -185,7 +195,7 @@ export const ProfileSelectorModal: React.FC = () => {
           </div>
         </div>
 
-        {/* Pie del modal con perfil actual y botón de continuar */}
+        {/* Pie del modal con perfil actual, opción de ajuste manual y botón de continuar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t-2 border-a11y-border text-sm font-bold">
           <div>
             Perfil activo actualmente:{' '}
@@ -193,12 +203,24 @@ export const ProfileSelectorModal: React.FC = () => {
               {userProfile.categoryLabel} — {userProfile.levelLabel}
             </strong>
           </div>
-          <button
-            onClick={() => setIsProfileModalOpen(false)}
-            className="touch-target px-5 py-2.5 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black"
-          >
-            Continuar con {userProfile.shortTitle}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                setIsProfileControlEnabled(false);
+                setIsProfileModalOpen(false);
+                setIsSettingsOpen(true);
+              }}
+              className="touch-target px-4 py-2.5 rounded-xl border-2 border-a11y-border bg-a11y-card text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-xs sm:text-sm"
+            >
+              🛠️ Apagar Perfil y Usar Ajuste Manual
+            </button>
+            <button
+              onClick={() => setIsProfileModalOpen(false)}
+              className="touch-target px-5 py-2.5 rounded-xl border-2 border-a11y-border bg-a11y-primary text-a11y-primaryText hover:brightness-105 font-black"
+            >
+              Continuar con {userProfile.shortTitle}
+            </button>
+          </div>
         </div>
       </div>
     </div>
