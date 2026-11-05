@@ -207,7 +207,11 @@ export const SettingsModal: React.FC = () => {
                 <div className="p-2 rounded-xl bg-a11y-bg border border-a11y-border/40">
                   <span className="block opacity-75">Formato Cognitivo:</span>
                   <strong className="text-a11y-primary">
-                    {cognitiveFormat === 'pictograms' ? 'Pictogramas ARASAAC' : 'Lectura Fácil UNE'}
+                    {cognitiveFormat === 'pictograms'
+                      ? 'Pictogramas ARASAAC'
+                      : cognitiveFormat === 'full-document'
+                      ? 'Documento Completo PDF'
+                      : 'Lectura Fácil UNE'}
                   </strong>
                 </div>
                 <div className="p-2 rounded-xl bg-a11y-bg border border-a11y-border/40">
@@ -450,16 +454,16 @@ export const SettingsModal: React.FC = () => {
               isProfileControlEnabled ? 'opacity-55 pointer-events-none select-none' : 'opacity-100'
             }`}
           >
-            {/* 4.1 Selección de Texto Fácil (Lectura Fácil) o Pictogramas ARASAAC */}
+            {/* 4.1 Selección de Texto Fácil, Pictogramas ARASAAC o Documento Completo IA para PDF */}
             <div className="space-y-2.5 p-4 rounded-2xl border-2 border-a11y-border bg-a11y-bg">
               <span className="block text-lg sm:text-xl font-black text-a11y-text flex items-center gap-2">
                 <BookOpen className="w-6 h-6 text-a11y-primary" aria-hidden="true" />
-                <span>Modo Cognitivo Fijado (Texto Fácil o Pictogramas):</span>
+                <span>Modo Cognitivo Fijado (Texto Fácil, Pictogramas o Documento PDF):</span>
               </span>
               <p className="text-xs sm:text-sm font-bold opacity-85 text-a11y-text">
-                Escoge si el Modo Cognitivo adapta los textos a Lectura Fácil (Norma UNE 153101 + ATECA) o a Pictogramas ARASAAC.
+                Escoge si el Modo Cognitivo genera pasos interactivos en Lectura Fácil, Pictogramas ARASAAC o un Documento Completo con todo el texto para extraer en PDF.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setCognitiveFormat('easy-read')}
@@ -469,7 +473,7 @@ export const SettingsModal: React.FC = () => {
                       : 'bg-a11y-card text-a11y-text border-a11y-border'
                   }`}
                 >
-                  1. Texto Fácil (Lectura Fácil UNE + ATECA)
+                  1. Texto Fácil (UNE + ATECA)
                 </button>
                 <button
                   type="button"
@@ -481,6 +485,17 @@ export const SettingsModal: React.FC = () => {
                   }`}
                 >
                   2. Pictogramas ARASAAC
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCognitiveFormat('full-document')}
+                  className={`touch-target p-3.5 rounded-2xl border-4 font-black text-sm sm:text-base ${
+                    cognitiveFormat === 'full-document'
+                      ? 'bg-a11y-primary text-a11y-primaryText border-a11y-border'
+                      : 'bg-a11y-card text-a11y-text border-a11y-border'
+                  }`}
+                >
+                  3. Texto Completo IA (PDF)
                 </button>
               </div>
             </div>

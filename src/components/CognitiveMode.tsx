@@ -13,7 +13,8 @@ import {
   ShieldCheck,
   AlertTriangle,
   XCircle,
-  UserCheck
+  UserCheck,
+  Download
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { useSpeech } from '../hooks/useSpeech';
@@ -22,10 +23,12 @@ import { useHaptics } from '../hooks/useHaptics';
 import { aiService } from '../services/aiService';
 import { validateEasyRead, summarizeChecks } from '../services/easyReadValidator';
 import { ARASAAC_ATTRIBUTION } from '../services/arasaacService';
+import { exportAccessibleDocumentToPdf } from '../services/pdfExportService';
 import {
   EasyReadStep,
   PictogramPhrase,
-  GuidelineCheck
+  GuidelineCheck,
+  FullAccessibleDocument
 } from '../types';
 
 export const CognitiveMode: React.FC = () => {
@@ -60,6 +63,11 @@ export const CognitiveMode: React.FC = () => {
   // Estado Apartado 2: Pictogramas ARASAAC
   const [pictoTitle, setPictoTitle] = useState<string>('');
   const [pictoPhrases, setPictoPhrases] = useState<PictogramPhrase[]>([]);
+
+  // Estado Apartado 3: Documento Completo Unificado (Texto íntegro IA + Extracción PDF)
+  const [fullDocument, setFullDocument] = useState<FullAccessibleDocument | null>(null);
+  const [isGeneratingFullDoc, setIsGeneratingFullDoc] = useState<boolean>(false);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraNativeInputRef = useRef<HTMLInputElement | null>(null);
@@ -169,8 +177,124 @@ export const CognitiveMode: React.FC = () => {
     }
   };
 
-  // Procesar según el apartado activo (Lectura Fácil UNE/ATECA o Pictogramas ARASAAC)
+  // Generar un Documento Completo con IA que contenga todo el texto y extraerlo como PDF
+  const handleGenerateFullDocumentAndPdf = async (autoDownloadPdf: boolean = true) => {
+    setErrorMsg(null);
+    stopSpeaking();
+
+    if (!inputText.trim() && !previewImage) {
+      const err = 'Por favor escribe un texto o haz una foto a un documento primero.';
+      setErrorMsg(err);
+      announce(err, 'assertive');
+      return;
+    }
+
+    if (!hasApiKey) {
+      const err = 'Falta configurar la Clave API de Gemini. Ve a Ajustes.';
+      setErrorMsg(err);
+      announce(err, 'assertive');
+      return;
+    }
+
+    setIsGeneratingFullDoc(true);
+    let base64Clean: string | undefined = undefined;
+    if (previewImage) {
+      base64Clean = previewImage.replace(/^data:image\/[a-z]+;base64,/, '');
+    }
+
+    try {
+      announce(
+        'Generando con IA un documento de texto completo con todo el contenido adaptado y preparando el archivo PDF...',
+        'assertive'
+      );
+
+      const docResult = await aiService.generateFullDocument({
+        text: inputText.trim() || undefined,
+        base64Image: base64Clean
+      });
+
+      setFullDocument(docResult);
+
+      const linesToValidate = [
+        docResult.summary,
+        ...docResult.fullTextParagraphs,
+        ...docResult.steps.map((s) => s.instruction)
+      ].filter(Boolean);
+      const checks = validateEasyRead(linesToValidate, maxWordsPerSentence);
+      setGuidelineChecks(checks);
+
+      setIsGeneratingFullDoc(false);
+      if (hapticEnabled) triggerSuccess();
+
+      if (autoDownloadPdf) {
+        setIsExportingPdf(true);
+        await exportAccessibleDocumentToPdf({
+          title: docResult.title,
+          userProfile,
+          summary: docResult.summary,
+          fullDocument: docResult,
+          steps: docResult.steps,
+          guidelineChecks: checks
+        });
+        setIsExportingPdf(false);
+        announce(
+          `Documento completo "${docResult.title}" generado y descargado como archivo PDF.`,
+          'assertive'
+        );
+      } else {
+        announce(
+          `Documento completo "${docResult.title}" generado correctamente. Pulsa Extraer como PDF para descargarlo.`,
+          'assertive'
+        );
+      }
+
+      if (autoSpeak) {
+        speak(`${docResult.title}. ${docResult.summary}. ${docResult.fullTextParagraphs[0] || ''}`);
+      }
+    } catch (err: any) {
+      const msg = err.message || 'Error al generar el documento completo con IA.';
+      setErrorMsg(msg);
+      setIsGeneratingFullDoc(false);
+      setIsExportingPdf(false);
+      if (hapticEnabled) triggerError();
+      announce(msg, 'assertive');
+    }
+  };
+
+  // Extraer / Descargar como PDF el contenido actual en pantalla
+  const handleDownloadPdf = async () => {
+    if (hapticEnabled) triggerShort();
+    setIsExportingPdf(true);
+    announce('Extrayendo documento como archivo PDF...', 'polite');
+    try {
+      await exportAccessibleDocumentToPdf({
+        title:
+          fullDocument?.title ||
+          pictoTitle ||
+          (summary ? summary.slice(0, 60) : 'Documento Adaptado en Lectura Fácil'),
+        userProfile,
+        summary: fullDocument?.summary || summary,
+        fullDocument,
+        steps: fullDocument?.steps?.length ? fullDocument.steps : steps,
+        pictoPhrases,
+        guidelineChecks
+      });
+      if (hapticEnabled) triggerSuccess();
+      announce('Archivo PDF extraído y descargado correctamente.', 'assertive');
+    } catch {
+      announce('No se pudo exportar el PDF.', 'assertive');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  // Procesar según el apartado activo (Lectura Fácil UNE/ATECA, Pictogramas ARASAAC o Documento Completo PDF)
   const handleProcess = async () => {
+    if (outputFormat === 'full-document') {
+      await handleGenerateFullDocumentAndPdf(true);
+      return;
+    }
+
     setErrorMsg(null);
     stopSpeaking();
 
@@ -414,7 +538,9 @@ export const CognitiveMode: React.FC = () => {
               <span className="block text-lg sm:text-xl md:text-2xl font-black leading-tight mt-0.5">
                 {outputFormat === 'easy-read'
                   ? 'Texto en Lectura Fácil (Norma UNE 153101:2018 EX + ATECA)'
-                  : 'Secuencia Visual con Pictogramas ARASAAC'}
+                  : outputFormat === 'pictograms'
+                  ? 'Secuencia Visual con Pictogramas ARASAAC'
+                  : 'Documento Completo con IA (Texto Íntegro + PDF)'}
               </span>
             </div>
           </div>
@@ -570,37 +696,68 @@ export const CognitiveMode: React.FC = () => {
         />
       </div>
 
-      {/* Botón de Acción Principal según apartado */}
-      <button
-        onClick={handleProcess}
-        disabled={isLoading}
-        className="w-full touch-target min-h-[72px] py-4 px-6 rounded-2xl bg-a11y-primary text-a11y-primaryText border-4 border-a11y-border font-black text-2xl md:text-3xl flex items-center justify-center gap-4 hover:brightness-105 active:scale-98 transition-transform disabled:opacity-50"
-        aria-label={
-          outputFormat === 'easy-read'
-            ? 'Simplificar texto a Lectura Fácil siguiendo Norma UNE 153101 y herramienta ATECA'
-            : 'Crear secuencia visual con Pictogramas de ARASAAC'
-        }
-      >
-        {outputFormat === 'easy-read' ? (
-          <>
-            <FileText className="w-8 h-8 shrink-0" aria-hidden="true" />
+      {/* Botones de Acción Principal y Generación de Texto Completo en PDF */}
+      <div className="space-y-3">
+        <button
+          onClick={handleProcess}
+          disabled={isLoading || isGeneratingFullDoc}
+          className="w-full touch-target min-h-[72px] py-4 px-6 rounded-2xl bg-a11y-primary text-a11y-primaryText border-4 border-a11y-border font-black text-xl sm:text-2xl md:text-3xl flex items-center justify-center gap-4 hover:brightness-105 active:scale-98 transition-transform disabled:opacity-50"
+          aria-label={
+            outputFormat === 'easy-read'
+              ? 'Simplificar texto a Lectura Fácil siguiendo Norma UNE 153101 y herramienta ATECA'
+              : outputFormat === 'pictograms'
+              ? 'Crear secuencia visual con Pictogramas de ARASAAC'
+              : 'Generar documento completo con IA y extraer como PDF'
+          }
+        >
+          {outputFormat === 'easy-read' ? (
+            <>
+              <FileText className="w-8 h-8 shrink-0" aria-hidden="true" />
+              <span>
+                {isLoading
+                  ? 'ADAPTANDO SEGÚN NORMA UNE 153101 Y ATECA...'
+                  : 'SIMPLIFICAR A LECTURA FÁCIL (UNE / ATECA)'}
+              </span>
+            </>
+          ) : outputFormat === 'pictograms' ? (
+            <>
+              <Images className="w-8 h-8 shrink-0" aria-hidden="true" />
+              <span>
+                {isLoading
+                  ? 'BUSCANDO PICTOGRAMAS EN ARASAAC...'
+                  : 'CREAR CON PICTOGRAMAS ARASAAC'}
+              </span>
+            </>
+          ) : (
+            <>
+              <Download className="w-8 h-8 shrink-0" aria-hidden="true" />
+              <span>
+                {isGeneratingFullDoc
+                  ? 'GENERANDO TEXTO COMPLETO Y PDF CON IA...'
+                  : 'GENERAR TEXTO COMPLETO CON IA Y EXTRAER PDF'}
+              </span>
+            </>
+          )}
+        </button>
+
+        {/* Opción directa siempre visible para que la IA redacte un texto que lo contenga todo y se extraiga como PDF */}
+        {outputFormat !== 'full-document' && (
+          <button
+            type="button"
+            onClick={() => handleGenerateFullDocumentAndPdf(true)}
+            disabled={isLoading || isGeneratingFullDoc}
+            className="w-full touch-target min-h-[64px] py-3.5 px-5 rounded-2xl border-4 border-a11y-border bg-a11y-card text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-base sm:text-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50"
+            aria-label="Generar con la IA un documento de texto completo que contenga todo y extraerlo como archivo PDF"
+          >
+            <Download className="w-7 h-7 shrink-0 text-a11y-primary" aria-hidden="true" />
             <span>
-              {isLoading
-                ? 'ADAPTANDO SEGÚN NORMA UNE 153101 Y ATECA...'
-                : 'SIMPLIFICAR A LECTURA FÁCIL (UNE / ATECA)'}
+              {isGeneratingFullDoc
+                ? 'REDACTANDO DOCUMENTO COMPLETO CON IA Y CREANDO PDF...'
+                : '📄 GENERAR TEXTO COMPLETO CON IA (CON TODO) Y EXTRAER COMO PDF'}
             </span>
-          </>
-        ) : (
-          <>
-            <Images className="w-8 h-8 shrink-0" aria-hidden="true" />
-            <span>
-              {isLoading
-                ? 'BUSCANDO PICTOGRAMAS EN ARASAAC...'
-                : 'CREAR CON PICTOGRAMAS ARASAAC'}
-            </span>
-          </>
+          </button>
         )}
-      </button>
+      </div>
 
       {/* Mensaje de Error si ocurre */}
       {errorMsg && (
@@ -705,20 +862,31 @@ export const CognitiveMode: React.FC = () => {
             </div>
           )}
 
-          {/* Barra de Progreso y Resumen */}
+          {/* Barra de Progreso, Resumen y Extracción a PDF */}
           <div className="p-5 rounded-2xl border-4 border-a11y-border bg-a11y-card space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xl md:text-2xl font-black text-a11y-text">
                 Progreso: {completedStepsCount} de {steps.length} pasos completados
               </span>
-              <button
-                onClick={() => setSteps(steps.map((s) => ({ ...s, completed: false })))}
-                className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText text-sm font-bold flex items-center gap-2"
-                aria-label="Reiniciar todos los pasos a no completados"
-              >
-                <RotateCcw className="w-5 h-5" aria-hidden="true" />
-                <span>Reiniciar</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={isExportingPdf}
+                  className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-primary text-a11y-primaryText hover:brightness-105 text-sm font-black flex items-center gap-2"
+                  aria-label="Extraer y descargar esta adaptación como archivo PDF"
+                >
+                  <Download className="w-5 h-5" aria-hidden="true" />
+                  <span>{isExportingPdf ? 'Creando PDF...' : 'Extraer como PDF'}</span>
+                </button>
+                <button
+                  onClick={() => setSteps(steps.map((s) => ({ ...s, completed: false })))}
+                  className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText text-sm font-bold flex items-center gap-2"
+                  aria-label="Reiniciar todos los pasos a no completados"
+                >
+                  <RotateCcw className="w-5 h-5" aria-hidden="true" />
+                  <span>Reiniciar</span>
+                </button>
+              </div>
             </div>
 
             {/* Barra visual de progreso */}
@@ -840,16 +1008,27 @@ export const CognitiveMode: React.FC = () => {
                   frase&quot;. ({completedPhrasesCount} de {pictoPhrases.length} completadas)
                 </p>
               </div>
-              <button
-                onClick={() =>
-                  setPictoPhrases(pictoPhrases.map((p) => ({ ...p, completed: false })))
-                }
-                className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText text-sm font-bold flex items-center gap-2"
-                aria-label="Reiniciar todas las secuencias de pictogramas"
-              >
-                <RotateCcw className="w-5 h-5" aria-hidden="true" />
-                <span>Reiniciar</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={isExportingPdf}
+                  className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-primary text-a11y-primaryText hover:brightness-105 text-sm font-black flex items-center gap-2"
+                  aria-label="Extraer y descargar esta secuencia de pictogramas como archivo PDF"
+                >
+                  <Download className="w-5 h-5" aria-hidden="true" />
+                  <span>{isExportingPdf ? 'Creando PDF...' : 'Extraer como PDF'}</span>
+                </button>
+                <button
+                  onClick={() =>
+                    setPictoPhrases(pictoPhrases.map((p) => ({ ...p, completed: false })))
+                  }
+                  className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText text-sm font-bold flex items-center gap-2"
+                  aria-label="Reiniciar todas las secuencias de pictogramas"
+                >
+                  <RotateCcw className="w-5 h-5" aria-hidden="true" />
+                  <span>Reiniciar</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -964,6 +1143,187 @@ export const CognitiveMode: React.FC = () => {
           {/* Atribución oficial obligatoria CC BY-NC-SA 4.0 de ARASAAC */}
           <div className="p-4 rounded-2xl border-2 border-a11y-border bg-a11y-card text-xs md:text-sm font-bold text-a11y-text opacity-90 text-center">
             {ARASAAC_ATTRIBUTION}
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          APARTADO 3: DOCUMENTO COMPLETO GENERADO POR IA (TEXTO CON TODO + PDF)
+         ===================================================================== */}
+      {fullDocument && (
+        <div
+          className="space-y-6 pt-4 border-t-4 border-a11y-border"
+          role="region"
+          aria-label="Documento completo generado por IA listo para extraer como PDF"
+        >
+          {/* Barra superior de acciones del Documento Completo */}
+          <div className="p-5 rounded-3xl border-4 border-a11y-primary bg-a11y-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+            <div className="space-y-1">
+              <span className="text-xs font-black uppercase tracking-wider text-a11y-primary">
+                📄 DOCUMENTO COMPLETO GENERADO POR IA (LECTURA FÁCIL + APOYO VISUAL)
+              </span>
+              <h3 className="text-2xl md:text-3xl font-black text-a11y-text">
+                {fullDocument.title}
+              </h3>
+              <p className="text-sm font-bold opacity-85 text-a11y-text">
+                Adaptado para el perfil <strong>{userProfile.shortTitle}</strong> según Norma UNE 153101:2018 EX y criterios ATECA.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={isExportingPdf}
+                className="touch-target px-5 py-3.5 rounded-2xl border-4 border-a11y-border bg-a11y-primary text-a11y-primaryText font-black text-base sm:text-lg flex items-center gap-2.5 hover:brightness-105 shadow-lg"
+                aria-label="Descargar y extraer el documento completo como archivo PDF"
+              >
+                <Download className="w-6 h-6 shrink-0" aria-hidden="true" />
+                <span>{isExportingPdf ? 'Generando PDF...' : '📥 Extraer como PDF'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  speak(
+                    `${fullDocument.title}. ${fullDocument.summary}. ${fullDocument.fullTextParagraphs.join(' ')}`
+                  )
+                }
+                className="touch-target px-4 py-3.5 rounded-2xl border-4 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-base flex items-center gap-2"
+                aria-label="Escuchar todo el documento completo en voz alta"
+              >
+                <Volume2 className="w-6 h-6 shrink-0" aria-hidden="true" />
+                <span>Escuchar Todo</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Vista unificada tipo folio de todo el contenido generado por la IA */}
+          <div className="p-6 md:p-8 rounded-3xl border-4 border-a11y-border bg-a11y-card space-y-6">
+            {/* 1. Resumen / Idea Principal */}
+            <div className="p-4 rounded-2xl border-2 border-a11y-primary bg-a11y-bg space-y-1">
+              <span className="text-xs font-black uppercase tracking-wider text-a11y-primary">
+                IDEA PRINCIPAL / RESUMEN:
+              </span>
+              <p className="text-xl md:text-2xl font-black text-a11y-text leading-snug">
+                💡 {fullDocument.summary}
+              </p>
+            </div>
+
+            {/* 2. Texto Completo Continuo redactado por la IA */}
+            <div className="space-y-3">
+              <h4 className="text-xl md:text-2xl font-black text-a11y-primary border-b-2 border-a11y-border pb-2">
+                TEXTO COMPLETO ADAPTADO:
+              </h4>
+              <div className="space-y-3">
+                {fullDocument.fullTextParagraphs.map((paragraph, index) => (
+                  <p
+                    key={`para-${index}`}
+                    className="p-4 rounded-2xl border-l-8 border-a11y-primary bg-a11y-bg text-lg md:text-2xl font-bold text-a11y-text leading-relaxed"
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Pasos Clave incluidos en el documento */}
+            {fullDocument.steps.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xl md:text-2xl font-black text-a11y-primary border-b-2 border-a11y-border pb-2">
+                  PASOS A SEGUIR / PUNTOS CLAVE:
+                </h4>
+                <div className="space-y-2.5">
+                  {fullDocument.steps.map((step) => (
+                    <div
+                      key={step.id}
+                      className="p-4 rounded-2xl border-2 border-a11y-border bg-a11y-bg flex items-start gap-3"
+                    >
+                      <span className="text-2xl shrink-0" aria-hidden="true">
+                        {step.emoji}
+                      </span>
+                      <p className="text-lg md:text-xl font-black text-a11y-text">
+                        <span className="text-a11y-primary mr-2">PASO {step.stepNumber}:</span>
+                        {step.instruction}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 4. Glosario de Palabras Difíciles Explicadas */}
+            {fullDocument.glossary.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xl md:text-2xl font-black text-a11y-primary border-b-2 border-a11y-border pb-2">
+                  GLOSARIO DE PALABRAS EXPLICADAS (UNE 153101):
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {fullDocument.glossary.map((item, idx) => (
+                    <div
+                      key={`gloss-${idx}`}
+                      className="p-3.5 rounded-2xl border-2 border-a11y-border bg-a11y-bg"
+                    >
+                      <span className="block text-base md:text-lg font-black text-a11y-primary">
+                        📌 {item.term}
+                      </span>
+                      <span className="block text-base font-bold text-a11y-text mt-1">
+                        {item.definition}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 5. Pictogramas ARASAAC incluidos en el Documento */}
+            {fullDocument.pictogramTokens.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xl md:text-2xl font-black text-a11y-primary border-b-2 border-a11y-border pb-2">
+                  PICTOGRAMAS ARASAAC DE APOYO VISUAL:
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {fullDocument.pictogramTokens.map((tok, idx) => (
+                    <div
+                      key={`doc-picto-${idx}`}
+                      className="p-3 rounded-2xl border-4 border-black bg-white text-black flex flex-col items-center justify-between"
+                    >
+                      <div className="w-24 h-24 flex items-center justify-center">
+                        {tok.imageUrl ? (
+                          <img
+                            src={tok.imageUrl}
+                            alt={`Pictograma de ${tok.word}`}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="font-black text-sm uppercase">{tok.word}</span>
+                        )}
+                      </div>
+                      <span className="mt-2 w-full text-center font-black text-sm uppercase border-t-2 border-black pt-1">
+                        {tok.word}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botón inferior de descarga rápida a PDF */}
+            <div className="pt-4 border-t-2 border-a11y-border flex justify-end">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={isExportingPdf}
+                className="w-full sm:w-auto touch-target px-6 py-4 rounded-2xl border-4 border-a11y-border bg-a11y-primary text-a11y-primaryText font-black text-xl flex items-center justify-center gap-3 hover:brightness-105"
+              >
+                <Download className="w-7 h-7 shrink-0" aria-hidden="true" />
+                <span>
+                  {isExportingPdf
+                    ? 'GENERANDO ARCHIVO PDF...'
+                    : '📥 DESCARGAR DOCUMENTO COMPLETO EN PDF'}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}

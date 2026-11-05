@@ -150,7 +150,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const [cognitiveFormat, setCognitiveFormatState] = useState<CognitiveOutputFormat>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.COGNITIVE_FORMAT) as CognitiveOutputFormat;
-    return saved && ['easy-read', 'pictograms'].includes(saved)
+    return saved && ['easy-read', 'pictograms', 'full-document'].includes(saved)
       ? saved
       : userProfile.recommendedFormat;
   });

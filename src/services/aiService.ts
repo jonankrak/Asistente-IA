@@ -1,4 +1,12 @@
-import { EasyReadStep, AacOption, PictogramResult, PictogramPhrase } from '../types';
+import {
+  EasyReadStep,
+  AacOption,
+  PictogramResult,
+  PictogramPhrase,
+  FullAccessibleDocument,
+  GlossaryItem,
+  PictogramToken
+} from '../types';
 import { devLogger } from './loggerService';
 import { findPictogramIds, getPictogramImageUrl } from './arasaacService';
 
@@ -115,7 +123,7 @@ export class AiService {
 
         const generationConfig: Record<string, any> = {
           temperature: params.temperature ?? 0.2,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
         };
 
         if (params.jsonMode) {
@@ -443,6 +451,167 @@ Responde estrictamente con un objeto JSON válido con esta estructura:
     return {
       title: String(parsed?.title || 'Información con pictogramas'),
       phrases
+    };
+  }
+
+  /**
+   * 2c. MODO COGNITIVO – DOCUMENTO COMPLETO UNIFICADO (PARA EXTRAER COMO PDF)
+   * Genera un texto completo e integral que reúne toda la adaptación (Título, Resumen,
+   * Texto completo redactado en Lectura Fácil, Pasos clave, Glosario de palabras difíciles
+   * y Pictogramas ARASAAC de apoyo) listo para leerse de corrido y extraerse como PDF.
+   */
+  async generateFullDocument(params: {
+    text?: string;
+    base64Image?: string;
+  }): Promise<FullAccessibleDocument> {
+    const profileBlock = this.currentProfileDirective
+      ? `\nADAPTACIÓN ESPECÍFICA AL PERFIL DEL USUARIO:\n${this.currentProfileDirective}\n`
+      : '';
+
+    const systemInstruction = `Eres un especialista en Accesibilidad Cognitiva, Lectura Fácil (Norma UNE 153101:2018 EX + herramienta ATECA) y Comunicación Aumentativa (ARASAAC).
+Tu objetivo es generar un DOCUMENTO COMPLETO Y AUTOCONTENIDO que contenga TODA la información explicada de principio a fin en un texto continuo y estructurado (listo para imprimirse o extraerse en PDF sin depender de la interfaz interactiva de la web).
+${profileBlock}
+${UNE_153101_GUIDELINES}
+
+Responde estrictamente con un objeto JSON válido con esta estructura exacta:
+{
+  "title": "Título claro y directo del documento",
+  "summary": "Resumen general en 1 o 2 frases muy sencillas de qué trata todo el documento.",
+  "fullTextParagraphs": [
+    "Párrafo 1 en Lectura Fácil explicando la primera parte de forma clara y completa.",
+    "Párrafo 2 en Lectura Fácil con una sola idea principal por oración.",
+    "Párrafo 3 en Lectura Fácil desarrollando todos los detalles importantes sin omitir datos."
+  ],
+  "steps": [
+    {
+      "stepNumber": 1,
+      "emoji": "✅",
+      "instruction": "Paso 1 o acción clave que debe realizar la persona."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Palabra importante o difícil",
+      "definition": "Explicación muy fácil con palabras de todos los días."
+    }
+  ],
+  "keywords": [
+    { "word": "Médico", "keyword": "médico" },
+    { "word": "Receta", "keyword": "receta" },
+    { "word": "Farmacia", "keyword": "farmacia" }
+  ]
+}`;
+
+    const parts: any[] = [];
+    if (params.base64Image) {
+      parts.push({ inlineData: { mimeType: 'image/jpeg', data: params.base64Image } });
+      parts.push({
+        text: 'Analiza íntegramente el documento o imagen adjunta y redacta un Documento Completo en Lectura Fácil con todo su contenido, pasos, glosario y palabras clave para exportar a PDF.'
+      });
+    }
+    if (params.text) {
+      parts.push({
+        text: `Redacta un Documento Completo en Lectura Fácil que contenga toda la información explicada de principio a fin para exportar a PDF a partir de este contenido: "${params.text}"`
+      });
+    }
+    if (parts.length === 0) {
+      throw new Error('Debes proporcionar un texto o una foto para generar el documento completo.');
+    }
+
+    const rawText = await this.callGeminiWithFallback({
+      systemInstruction,
+      parts,
+      jsonMode: true,
+      temperature: 0.2
+    });
+
+    let parsed: any = null;
+    try {
+      const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const firstBrace = cleanJson.indexOf('{');
+      const lastBrace = cleanJson.lastIndexOf('}');
+      parsed = JSON.parse(
+        firstBrace !== -1 && lastBrace !== -1
+          ? cleanJson.substring(firstBrace, lastBrace + 1)
+          : cleanJson
+      );
+    } catch {
+      parsed = {
+        title: 'Documento Adaptado en Lectura Fácil',
+        summary: 'Contenido adaptado automáticamente por IA.',
+        fullTextParagraphs: rawText
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean),
+        steps: [],
+        glossary: [],
+        keywords: []
+      };
+    }
+
+    const paragraphs: string[] = Array.isArray(parsed?.fullTextParagraphs)
+      ? parsed.fullTextParagraphs.map((p: any) => String(p).trim()).filter(Boolean)
+      : [];
+
+    const rawSteps: any[] = Array.isArray(parsed?.steps) ? parsed.steps : [];
+    const steps: EasyReadStep[] = rawSteps.map((s: any, idx: number) => ({
+      id: `doc-step-${idx + 1}-${Date.now()}`,
+      stepNumber: Number(s.stepNumber) || idx + 1,
+      emoji: s.emoji || '➡️',
+      instruction: String(s.instruction || s.text || s).trim(),
+      completed: false
+    }));
+
+    const rawGlossary: any[] = Array.isArray(parsed?.glossary) ? parsed.glossary : [];
+    const glossary: GlossaryItem[] = rawGlossary
+      .map((g: any) => ({
+        term: String(g?.term || '').trim(),
+        definition: String(g?.definition || '').trim()
+      }))
+      .filter((g) => g.term && g.definition);
+
+    const rawKeywords: { word: string; keyword: string }[] = Array.isArray(parsed?.keywords)
+      ? parsed.keywords
+          .map((k: any) =>
+            typeof k === 'string'
+              ? { word: k, keyword: k.toLowerCase() }
+              : {
+                  word: String(k?.word || k?.keyword || '').trim(),
+                  keyword: String(k?.keyword || k?.word || '').trim().toLowerCase()
+                }
+          )
+          .filter((k: { word: string; keyword: string }) => k.keyword.length > 0)
+          .slice(0, 8)
+      : [];
+
+    let pictogramTokens: PictogramToken[] = [];
+    if (rawKeywords.length > 0) {
+      try {
+        const idMap = await findPictogramIds(rawKeywords.map((k) => k.keyword));
+        pictogramTokens = rawKeywords.map((k) => {
+          const id = idMap.get(k.keyword) ?? null;
+          return {
+            word: k.word,
+            keyword: k.keyword,
+            pictogramId: id,
+            imageUrl: id ? getPictogramImageUrl(id, 300) : null
+          };
+        });
+      } catch {
+        pictogramTokens = [];
+      }
+    }
+
+    return {
+      title: String(parsed?.title || 'Documento Completo en Lectura Fácil'),
+      summary: String(parsed?.summary || paragraphs[0] || 'Resumen del documento adaptado.'),
+      fullTextParagraphs:
+        paragraphs.length > 0
+          ? paragraphs
+          : steps.map((s) => `${s.stepNumber}. ${s.instruction}`),
+      steps,
+      glossary,
+      pictogramTokens
     };
   }
 
