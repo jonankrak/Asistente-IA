@@ -1,13 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  Camera,
-  Mic,
   CheckCircle2,
   Circle,
   Volume2,
   Sparkles,
   RotateCcw,
-  Upload,
   FileText,
   Images,
   ShieldCheck,
@@ -18,7 +15,6 @@ import {
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { useSpeech } from '../hooks/useSpeech';
-import { useCamera } from '../hooks/useCamera';
 import { useHaptics } from '../hooks/useHaptics';
 import { aiService } from '../services/aiService';
 import { validateEasyRead, summarizeChecks } from '../services/easyReadValidator';
@@ -37,7 +33,6 @@ export const CognitiveMode: React.FC = () => {
     speechRate,
     hapticEnabled,
     hasApiKey,
-    isMobile,
     userProfile,
     setIsProfileModalOpen,
     setIsSettingsOpen,
@@ -52,7 +47,6 @@ export const CognitiveMode: React.FC = () => {
   const [inputText, setInputText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Estado Apartado 1: Lectura Fácil (UNE 153101:2018 EX + ATECA)
   const [summary, setSummary] = useState<string>('');
@@ -69,121 +63,17 @@ export const CognitiveMode: React.FC = () => {
   const [isGeneratingFullDoc, setIsGeneratingFullDoc] = useState<boolean>(false);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const cameraNativeInputRef = useRef<HTMLInputElement | null>(null);
-
-  const {
-    videoRef,
-    isCameraActive,
-    startCamera,
-    stopCamera,
-    captureFrame
-  } = useCamera();
-
-  const {
-    isListening,
-    startListening,
-    stopListening,
-    speak,
-    stopSpeaking
-  } = useSpeech({
-    rate: speechRate,
-    onTranscriptChange: (text) => setInputText(text)
+  const { speak, stopSpeaking } = useSpeech({
+    rate: speechRate
   });
-
-  // Alternar vista de cámara (con fallback a cámara nativa de Android Chrome)
-  const handleToggleCamera = async () => {
-    if (isCameraActive) {
-      stopCamera();
-    } else {
-      const started = await startCamera('environment');
-      if (started) {
-        announce('Cámara activada para fotografiar documento', 'polite');
-      } else {
-        cameraNativeInputRef.current?.click();
-      }
-    }
-  };
-
-  // Capturar fotograma de documento
-  const handleCaptureDocument = () => {
-    if (hapticEnabled) triggerShort();
-    const frame = captureFrame();
-    if (frame) {
-      setPreviewImage(frame.fullDataUrl);
-      stopCamera();
-      announce('Foto de documento capturada. Pulsa el botón principal para procesar.', 'assertive');
-    }
-  };
-
-  // Optimizar y reducir fotos pesadas a tamaño web ligero
-  const compressImage = (dataUrl: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const MAX_DIM = 1024;
-        let w = img.width;
-        let h = img.height;
-        if (w > MAX_DIM || h > MAX_DIM) {
-          if (w > h) {
-            h = Math.round((h * MAX_DIM) / w);
-            w = MAX_DIM;
-          } else {
-            w = Math.round((w * MAX_DIM) / h);
-            h = MAX_DIM;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.75));
-        } else {
-          resolve(dataUrl);
-        }
-      };
-      img.onerror = () => resolve(dataUrl);
-      img.src = dataUrl;
-    });
-  };
-
-  // Subir imagen desde galería/archivo
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const result = reader.result as string;
-      announce('Comprimiendo imagen para procesamiento rápido...', 'polite');
-      const optimized = await compressImage(result);
-      setPreviewImage(optimized);
-      announce('Documento cargado y optimizado correctamente.', 'polite');
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Dictado por voz
-  const handleToggleMic = () => {
-    if (hapticEnabled) triggerShort();
-    if (isListening) {
-      stopListening();
-      announce('Dictado finalizado.', 'polite');
-    } else {
-      startListening();
-      announce('Escuchando lo que deseas adaptar...', 'polite');
-    }
-  };
 
   // Generar un Documento Completo con IA que contenga todo el texto y extraerlo como PDF
   const handleGenerateFullDocumentAndPdf = async (autoDownloadPdf: boolean = true) => {
     setErrorMsg(null);
     stopSpeaking();
 
-    if (!inputText.trim() && !previewImage) {
-      const err = 'Por favor escribe un texto o haz una foto a un documento primero.';
+    if (!inputText.trim()) {
+      const err = 'Por favor escribe o pega un texto primero.';
       setErrorMsg(err);
       announce(err, 'assertive');
       return;
@@ -197,10 +87,6 @@ export const CognitiveMode: React.FC = () => {
     }
 
     setIsGeneratingFullDoc(true);
-    let base64Clean: string | undefined = undefined;
-    if (previewImage) {
-      base64Clean = previewImage.replace(/^data:image\/[a-z]+;base64,/, '');
-    }
 
     try {
       announce(
@@ -209,8 +95,7 @@ export const CognitiveMode: React.FC = () => {
       );
 
       const docResult = await aiService.generateFullDocument({
-        text: inputText.trim() || undefined,
-        base64Image: base64Clean
+        text: inputText.trim()
       });
 
       setFullDocument(docResult);
@@ -298,8 +183,8 @@ export const CognitiveMode: React.FC = () => {
     setErrorMsg(null);
     stopSpeaking();
 
-    if (!inputText.trim() && !previewImage) {
-      const err = 'Por favor escribe un texto o haz una foto a un documento.';
+    if (!inputText.trim()) {
+      const err = 'Por favor escribe o pega el texto que deseas adaptar.';
       setErrorMsg(err);
       announce(err, 'assertive');
       return;
@@ -313,10 +198,6 @@ export const CognitiveMode: React.FC = () => {
     }
 
     setIsLoading(true);
-    let base64Clean: string | undefined = undefined;
-    if (previewImage) {
-      base64Clean = previewImage.replace(/^data:image\/[a-z]+;base64,/, '');
-    }
 
     try {
       if (outputFormat === 'easy-read') {
@@ -326,8 +207,7 @@ export const CognitiveMode: React.FC = () => {
         );
 
         const result = await aiService.simplifyToEasyRead({
-          text: inputText.trim() || undefined,
-          base64Image: base64Clean
+          text: inputText.trim()
         });
 
         setSummary(result.summary);
@@ -358,8 +238,7 @@ export const CognitiveMode: React.FC = () => {
         );
 
         const result = await aiService.generatePictograms({
-          text: inputText.trim() || undefined,
-          base64Image: base64Clean
+          text: inputText.trim()
         });
 
         setPictoTitle(result.title);
@@ -556,122 +435,6 @@ export const CognitiveMode: React.FC = () => {
         </div>
       </div>
 
-      {/* Selector de Entrada: Cámara, Subir Imagen o Dictar (Grid de 3 botones en móvil) */}
-      <div className="grid grid-cols-3 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3">
-        <button
-          onClick={handleToggleCamera}
-          className={`touch-target min-h-[68px] px-3 sm:px-5 py-3 rounded-2xl border-4 font-black text-sm sm:text-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3 transition-colors ${
-            isCameraActive
-              ? 'bg-red-500 text-black border-red-700'
-              : 'bg-a11y-bg text-a11y-text border-a11y-border hover:bg-a11y-primary hover:text-a11y-primaryText'
-          }`}
-          aria-label={
-            isCameraActive
-              ? 'Cerrar cámara'
-              : 'Abrir cámara para fotografiar carta, cartel o factura'
-          }
-        >
-          <Camera className="w-7 h-7 shrink-0" aria-hidden="true" />
-          <span className="text-center leading-tight">
-            {isCameraActive ? 'Cerrar' : isMobile ? 'Cámara' : 'Foto a Documento'}
-          </span>
-        </button>
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="touch-target min-h-[68px] px-3 sm:px-5 py-3 rounded-2xl border-4 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-sm sm:text-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3"
-          aria-label="Subir foto desde tus archivos o galería"
-        >
-          <Upload className="w-7 h-7 shrink-0" aria-hidden="true" />
-          <span className="text-center leading-tight">
-            {isMobile ? 'Galería' : 'Subir Imagen'}
-          </span>
-        </button>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileUpload}
-          accept="image/*"
-          className="hidden"
-          aria-hidden="true"
-        />
-        <input
-          type="file"
-          ref={cameraNativeInputRef}
-          onChange={handleFileUpload}
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          aria-hidden="true"
-        />
-
-        <button
-          onClick={handleToggleMic}
-          className={`touch-target min-h-[68px] px-3 sm:px-5 py-3 rounded-2xl border-4 font-black text-sm sm:text-lg flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3 transition-colors ${
-            isListening
-              ? 'bg-yellow-400 text-black border-black animate-pulse'
-              : 'bg-a11y-bg text-a11y-text border-a11y-border hover:bg-a11y-primary hover:text-a11y-primaryText'
-          }`}
-          aria-label={
-            isListening ? 'Detener dictado por voz' : 'Dictar tarea o texto con tu voz'
-          }
-        >
-          <Mic className="w-7 h-7 shrink-0" aria-hidden="true" />
-          <span className="text-center leading-tight">
-            {isListening ? 'Parar' : isMobile ? 'Dictar' : 'Dictar con Voz'}
-          </span>
-        </button>
-      </div>
-
-      {/* Visor de Cámara si está activa */}
-      {isCameraActive && (
-        <div className="relative w-full rounded-3xl overflow-hidden border-4 border-a11y-border bg-black aspect-video max-h-80">
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            autoPlay
-            className="w-full h-full object-cover"
-            aria-label="Cámara para capturar documento"
-          />
-          <button
-            onClick={handleCaptureDocument}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 touch-target px-8 py-4 rounded-2xl bg-a11y-primary text-a11y-primaryText border-4 border-a11y-border font-black text-xl shadow-2xl"
-            aria-label="Tomar foto ahora para procesar"
-          >
-            📸 TOMAR FOTO AL DOCUMENTO
-          </button>
-        </div>
-      )}
-
-      {/* Miniatura de imagen cargada */}
-      {previewImage && !isCameraActive && (
-        <div className="flex items-center gap-4 p-4 rounded-2xl border-4 border-a11y-border bg-a11y-card">
-          <img
-            src={previewImage}
-            alt="Vista previa del documento"
-            className="w-24 h-24 object-cover rounded-xl border-2 border-a11y-border"
-          />
-          <div className="flex-1">
-            <p className="font-black text-lg text-a11y-text">
-              Foto de documento lista para procesar
-            </p>
-            <p className="text-sm opacity-80">
-              {outputFormat === 'easy-read'
-                ? 'Se adaptará a Lectura Fácil según la Norma UNE 153101:2018 EX y ATECA.'
-                : 'Se convertirá en una secuencia visual de pictogramas ARASAAC.'}
-            </p>
-          </div>
-          <button
-            onClick={() => setPreviewImage(null)}
-            className="touch-target px-4 py-2 rounded-xl border-2 border-red-500 bg-red-950/40 text-red-300 font-bold"
-            aria-label="Eliminar foto del documento"
-          >
-            Eliminar
-          </button>
-        </div>
-      )}
-
       {/* Caja de texto accesible con tipografía grande (>= 20px) */}
       <div className="space-y-3">
         <label
@@ -679,8 +442,10 @@ export const CognitiveMode: React.FC = () => {
           className="block text-xl md:text-2xl font-black text-a11y-text"
         >
           {outputFormat === 'easy-read'
-            ? 'Escribe o dicta el texto o tarea para adaptar a Lectura Fácil (UNE 153101 / ATECA):'
-            : 'Escribe o dicta la frase, rutina o texto para crear con Pictogramas ARASAAC:'}
+            ? 'Escribe o pega el texto o tarea para adaptar a Lectura Fácil (UNE 153101 / ATECA):'
+            : outputFormat === 'pictograms'
+            ? 'Escribe o pega la frase, rutina o texto para crear con Pictogramas ARASAAC:'
+            : 'Escribe o pega el texto para generar un Documento Completo con IA y extraerlo en PDF:'}
         </label>
         <textarea
           id="cognitive-input"
@@ -688,10 +453,10 @@ export const CognitiveMode: React.FC = () => {
           onChange={(e) => setInputText(e.target.value)}
           placeholder={
             outputFormat === 'easy-read'
-              ? 'Ej: Carta médica, contrato, notificación oficial o instrucciones para poner la lavadora...'
+              ? 'Ej: Carta médica, contrato, apuntes escolares, notificación oficial o instrucciones de una tarea...'
               : 'Ej: Primero me lavo las manos con agua y jabón, después como en la mesa y luego me cepillo los dientes...'
           }
-          rows={3}
+          rows={4}
           className="w-full p-4 rounded-2xl border-4 border-a11y-border bg-a11y-bg text-a11y-text text-xl font-bold placeholder:opacity-50 focus:outline-none"
         />
       </div>

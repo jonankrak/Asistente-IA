@@ -464,13 +464,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       }
 
       if (!isInput) {
-        if (e.key === '1') {
-          setMode('visual');
-        } else if (e.key === '2') {
-          setMode('cognitive');
-        } else if (e.key === '3') {
-          setMode('auditory');
-        } else if (e.key === 'p' || e.key === 'P') {
+        if (e.key === 'p' || e.key === 'P') {
           setIsProfileModalOpen((prev) => !prev);
         } else if (e.key === 's' || e.key === 'S') {
           setIsSettingsOpen((prev) => !prev);

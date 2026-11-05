@@ -686,10 +686,10 @@ export const SettingsModal: React.FC = () => {
             Atajos de Teclado Disponibles:
           </p>
           <ul className="list-disc list-inside space-y-1 opacity-90">
-            <li><strong>Barra Espaciadora:</strong> Tocar botón principal / Describir escena</li>
-            <li><strong>Teclas 1, 2, 3:</strong> Cambiar entre Visual, Cognitivo y Habla CAA</li>
-            <li><strong>Tecla P:</strong> Abrir Selector de Perfiles</li>
+            <li><strong>Tecla P:</strong> Abrir Selector de Perfiles Cognitivos</li>
             <li><strong>Tecla S:</strong> Abrir o cerrar estos Ajustes</li>
+            <li><strong>Tecla D:</strong> Abrir o cerrar la Consola de Diagnóstico</li>
+            <li><strong>Escape:</strong> Cerrar ventana activa</li>
           </ul>
         </div>
       </div>

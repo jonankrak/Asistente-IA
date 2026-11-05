@@ -1,9 +1,7 @@
 import React from 'react';
-import { AccessibilityProvider, useAccessibility } from './context/AccessibilityContext';
+import { AccessibilityProvider } from './context/AccessibilityContext';
 import { Header } from './components/Header';
-import { VisualMode } from './components/VisualMode';
 import { CognitiveMode } from './components/CognitiveMode';
-import { AuditoryMode } from './components/AuditoryMode';
 import { SettingsModal } from './components/SettingsModal';
 import { ProfileSelectorModal } from './components/ProfileSelectorModal';
 import { DevConsole } from './components/DevConsole';
@@ -19,8 +17,6 @@ const TEAM_MEMBERS = [
 ];
 
 const MainContent: React.FC = () => {
-  const { mode, isMobile } = useAccessibility();
-
   return (
     <div className="min-h-screen flex flex-col bg-a11y-bg text-a11y-text transition-colors duration-200">
       {/* Enlace de salto accesible para usuarios de lector de pantalla y teclado */}
@@ -34,26 +30,22 @@ const MainContent: React.FC = () => {
       {/* Región de anuncios ARIA Live en vivo */}
       <A11yAnnouncer />
 
-      {/* Barra de cabecera (PC) o Barra superior compacta + Barra inferior fija (Móvil) */}
+      {/* Barra de cabecera para PC y Móvil */}
       <Header />
 
-      {/* Contenido principal según el modo seleccionado */}
+      {/* Contenido principal: Accesibilidad Cognitiva */}
       <main
         id="main-content"
         tabIndex={-1}
         className="flex-1 flex flex-col items-center justify-start w-full outline-none"
         role="main"
       >
-        {mode === 'visual' && <VisualMode />}
-        {mode === 'cognitive' && <CognitiveMode />}
-        {mode === 'auditory' && <AuditoryMode />}
+        <CognitiveMode />
       </main>
 
       {/* Pie de página institucional con Logo de La Salle Bilbao y Autores (visible en PC y Móvil) */}
       <footer
-        className={`w-full border-t-4 border-a11y-border bg-a11y-card px-4 py-6 text-center ${
-          isMobile ? 'pb-28' : ''
-        }`}
+        className="w-full border-t-4 border-a11y-border bg-a11y-card px-4 py-6 text-center"
         role="contentinfo"
       >
         <div className="max-w-5xl mx-auto flex flex-col items-center gap-4">
