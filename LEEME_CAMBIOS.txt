@@ -1,0 +1,45 @@
+ARCHIVOS CORREGIDOS - Asistente IA
+
+Esta carpeta es el proyecto COMPLETO ya corregido.
+
+Cómo usarla:
+1. Haz una copia de seguridad de tu carpeta actual del proyecto.
+2. Sustituye tu carpeta por esta (o copia todo su contenido encima).
+3. Ejecuta "npm install" para instalar las librerías (incluidas las nuevas:
+   qrcode y la tipografía Atkinson Hyperlegible).
+4. Sube los cambios a GitHub (SubirAGitHub.bat) y abre la web.
+5. En Ajustes, vuelve a introducir la clave de Gemini.
+
+Archivos importantes:
+- index.html: versión ya compilada para GitHub Pages (la que se publica).
+- index.dev.html: plantilla para trabajar con el código. Para usar
+  "npm run dev" o "npm run build", renómbrala a index.html y, al terminar,
+  vuelve a poner la versión compilada antes de publicar.
+- SUBIR_A_GITHUB_WEB: la misma versión compilada, en archivos separados.
+
+NUEVO EN ESTA VERSIÓN
+- Gemini: ya no se envía "temperature", que Google ha retirado en Gemini 3.6 Flash
+  y 3.5 Flash-Lite. La clave va en una cabecera, no en la dirección. Límite de
+  respuesta ampliado (estos modelos "piensan" antes de responder).
+- Leer fácil (Texto fácil y Pictogramas): debajo del resultado, "¿Lo has entendido?" con tres botones:
+  "Lo he entendido", "Otra versión" (mismo nivel, otras palabras) y "Más fácil"
+  (frases de 8 palabras como máximo, una idea por paso).
+- Revisión docente: botón "Editar (docente)" para corregir cada paso (las pautas
+  se vuelven a comprobar al editar) y "Ver texto original" para comparar
+  (también en Pictogramas).
+- Perfiles con nombres por necesidades: Comprender textos, Entender instrucciones
+  y anticipar rutinas, Leer con más facilidad, Mantener la atención y seguir pasos.
+
+DE LA VERSIÓN ANTERIOR
+- Seguridad: QR generado dentro de la página, sin clave en el QR ni en enlaces;
+  la clave del .env no se publica.
+- Textos sin "WCAG 2.2 AAA", "Cumplimiento automático" ni "Validador".
+- Perfiles sin diagnósticos ni grados; no se envían etiquetas clínicas a Gemini.
+- Sin nombres del alumnado en el pie (App.tsx, TEAM_MEMBERS).
+- Nueva interfaz: tipografía legible, cabecera más limpia y Leer fácil en 3 pasos.
+
+IMPORTANTE
+- Si la clave se compartió alguna vez por QR o enlace, anúlala en Google AI Studio.
+- Restringe la clave en Google Cloud a la dirección de vuestra web y pon un límite
+  de gasto: en una web sin servidor, quien use el dispositivo puede llegar a verla.
+- Los nombres siguen en el historial de GitHub.

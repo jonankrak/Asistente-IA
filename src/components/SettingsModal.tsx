@@ -17,6 +17,7 @@ import {
   BookOpen,
   ListChecks
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { ContrastTheme, FontSize } from '../types';
 
@@ -66,6 +67,20 @@ export const SettingsModal: React.FC = () => {
     return 'https://jonankrak.github.io/Asistente-IA/';
   });
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+
+  // Dirección de la app SIN la clave API: la clave nunca viaja en enlaces ni en el QR.
+  const appUrl = (
+    githubPagesUrl.trim() || window.location.origin + window.location.pathname
+  ).replace(/#.*$/, '');
+
+  // El QR se genera dentro del propio navegador (sin servicios externos).
+  useEffect(() => {
+    if (!showMobileQr) return;
+    QRCode.toDataURL(appUrl, { width: 180, margin: 1 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(''));
+  }, [showMobileQr, appUrl]);
 
   useEffect(() => {
     setInputKey(apiKey);
@@ -207,11 +222,7 @@ export const SettingsModal: React.FC = () => {
                 <div className="p-2 rounded-xl bg-a11y-bg border border-a11y-border/40">
                   <span className="block opacity-75">Formato Cognitivo:</span>
                   <strong className="text-a11y-primary">
-                    {cognitiveFormat === 'pictograms'
-                      ? 'Pictogramas ARASAAC'
-                      : cognitiveFormat === 'full-document'
-                      ? 'Documento Completo PDF'
-                      : 'Lectura Fácil UNE'}
+                    {cognitiveFormat === 'pictograms' ? 'Pictogramas ARASAAC' : 'Lectura Fácil UNE'}
                   </strong>
                 </div>
                 <div className="p-2 rounded-xl bg-a11y-bg border border-a11y-border/40">
@@ -269,28 +280,21 @@ export const SettingsModal: React.FC = () => {
             </p>
           )}
 
-          {/* Enlace rápido y Código QR para abrir en el teléfono con la clave ya configurada */}
+          {/* Enlace y Código QR para abrir la app en el teléfono (la clave se introduce en cada dispositivo) */}
           <div className="pt-2 border-t border-a11y-border/50 space-y-3">
             <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => {
-                  const rawBase = (
-                    githubPagesUrl.trim() || window.location.origin + window.location.pathname
-                  ).replace(/#.*$/, '');
-                  const cleanKey = (inputKey || apiKey).trim();
-                  const mobileUrl = cleanKey
-                    ? `${rawBase}#key=${encodeURIComponent(cleanKey)}`
-                    : rawBase;
-                  navigator.clipboard.writeText(mobileUrl);
+                  navigator.clipboard.writeText(appUrl);
                   setCopiedMobileLink(true);
-                  announce('Enlace para teléfono copiado al portapapeles', 'polite');
+                  announce('Enlace de la aplicación copiado al portapapeles', 'polite');
                   setTimeout(() => setCopiedMobileLink(false), 3000);
                 }}
                 className="touch-target px-3.5 py-2 rounded-xl border-2 border-a11y-border bg-a11y-card text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-xs sm:text-sm flex items-center gap-2"
               >
                 <Copy className="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>{copiedMobileLink ? '¡Enlace copiado!' : 'Copiar enlace con Clave'}</span>
+                <span>{copiedMobileLink ? '¡Enlace copiado!' : 'Copiar enlace de la app'}</span>
               </button>
 
               <button
@@ -322,25 +326,22 @@ export const SettingsModal: React.FC = () => {
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                      (
-                        githubPagesUrl.trim() || window.location.origin + window.location.pathname
-                      ).replace(/#.*$/, '') +
-                        ((inputKey || apiKey).trim()
-                          ? `#key=${encodeURIComponent((inputKey || apiKey).trim())}`
-                          : '')
-                    )}`}
-                    alt="Código QR para abrir la aplicación en el teléfono con la clave API configurada"
-                    className="w-36 h-36 rounded-xl border-2 border-black shrink-0"
-                  />
+                  {qrDataUrl ? (
+                    <img
+                      src={qrDataUrl}
+                      alt="Código QR para abrir la aplicación en el teléfono"
+                      className="w-36 h-36 rounded-xl border-2 border-black shrink-0"
+                    />
+                  ) : (
+                    <div className="w-36 h-36 rounded-xl border-2 border-black shrink-0" aria-hidden="true" />
+                  )}
                   <div className="space-y-1 text-xs sm:text-sm">
                     <p className="font-black text-sm sm:text-base">
                       📱 Escanea con la cámara de tu teléfono
                     </p>
                     <p className="font-semibold">
-                      Al escanear este QR desde tu teléfono se abrirá la app en Chrome Android y se
-                      guardará automáticamente tu clave API sin tener que escribirla.
+                      Al escanear este QR se abrirá la app en el teléfono. Por seguridad, la clave API no
+                      se incluye en el QR ni en el enlace: introdúcela en Ajustes en cada dispositivo.
                     </p>
                   </div>
                 </div>
@@ -454,16 +455,16 @@ export const SettingsModal: React.FC = () => {
               isProfileControlEnabled ? 'opacity-55 pointer-events-none select-none' : 'opacity-100'
             }`}
           >
-            {/* 4.1 Selección de Texto Fácil, Pictogramas ARASAAC o Documento Completo IA para PDF */}
+            {/* 4.1 Selección de Texto Fácil (Lectura Fácil) o Pictogramas ARASAAC */}
             <div className="space-y-2.5 p-4 rounded-2xl border-2 border-a11y-border bg-a11y-bg">
               <span className="block text-lg sm:text-xl font-black text-a11y-text flex items-center gap-2">
                 <BookOpen className="w-6 h-6 text-a11y-primary" aria-hidden="true" />
-                <span>Modo Cognitivo Fijado (Texto Fácil, Pictogramas o Documento PDF):</span>
+                <span>Modo Cognitivo Fijado (Texto Fácil o Pictogramas):</span>
               </span>
               <p className="text-xs sm:text-sm font-bold opacity-85 text-a11y-text">
-                Escoge si el Modo Cognitivo genera pasos interactivos en Lectura Fácil, Pictogramas ARASAAC o un Documento Completo con todo el texto para extraer en PDF.
+                Escoge si el Modo Cognitivo adapta los textos a Lectura Fácil (pautas UNE 153101) o a Pictogramas ARASAAC.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setCognitiveFormat('easy-read')}
@@ -473,7 +474,7 @@ export const SettingsModal: React.FC = () => {
                       : 'bg-a11y-card text-a11y-text border-a11y-border'
                   }`}
                 >
-                  1. Texto Fácil (UNE + ATECA)
+                  1. Texto Fácil (pautas de Lectura Fácil)
                 </button>
                 <button
                   type="button"
@@ -485,17 +486,6 @@ export const SettingsModal: React.FC = () => {
                   }`}
                 >
                   2. Pictogramas ARASAAC
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCognitiveFormat('full-document')}
-                  className={`touch-target p-3.5 rounded-2xl border-4 font-black text-sm sm:text-base ${
-                    cognitiveFormat === 'full-document'
-                      ? 'bg-a11y-primary text-a11y-primaryText border-a11y-border'
-                      : 'bg-a11y-card text-a11y-text border-a11y-border'
-                  }`}
-                >
-                  3. Texto Completo IA (PDF)
                 </button>
               </div>
             </div>
@@ -583,7 +573,7 @@ export const SettingsModal: React.FC = () => {
                   htmlFor="max-words-slider"
                   className="block text-base font-black text-a11y-text"
                 >
-                  Límite de Palabras por Frase (Validador UNE/ATECA): {maxWordsPerSentence} palabras
+                  Límite de Palabras por Frase (comprobación de pautas): {maxWordsPerSentence} palabras
                 </label>
                 <input
                   id="max-words-slider"
@@ -686,10 +676,10 @@ export const SettingsModal: React.FC = () => {
             Atajos de Teclado Disponibles:
           </p>
           <ul className="list-disc list-inside space-y-1 opacity-90">
-            <li><strong>Tecla P:</strong> Abrir Selector de Perfiles Cognitivos</li>
+            <li><strong>Barra Espaciadora:</strong> Tocar botón principal / Describir escena</li>
+            <li><strong>Teclas 1, 2, 3:</strong> Cambiar entre Visual, Cognitivo y Habla CAA</li>
+            <li><strong>Tecla P:</strong> Abrir Selector de Perfiles</li>
             <li><strong>Tecla S:</strong> Abrir o cerrar estos Ajustes</li>
-            <li><strong>Tecla D:</strong> Abrir o cerrar la Consola de Diagnóstico</li>
-            <li><strong>Escape:</strong> Cerrar ventana activa</li>
           </ul>
         </div>
       </div>

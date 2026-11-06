@@ -1,6 +1,6 @@
-# Asistente Adaptado Multimodal con IA (WCAG 2.2 Nivel AAA)
+# Asistente Adaptado Multimodal con IA
 
-Prototipo funcional (MVP) de un **Asistente Adaptado Multimodal con Inteligencia Artificial** diseñado específicamente para personas con discapacidad visual, cognitiva y auditiva/del habla. Cumple estrictamente con las directrices de accesibilidad web **WCAG 2.2 Nivel AAA** e integra el SDK oficial de **Google Gemini** (`@google/genai`) con el modelo de baja latencia `gemini-3.8-flash`.
+Prototipo funcional (MVP) de un **Asistente Adaptado Multimodal con Inteligencia Artificial** diseñado específicamente para personas con discapacidad visual, cognitiva y auditiva/del habla. Se ha diseñado siguiendo las pautas de accesibilidad web **WCAG 2.2** (pendiente de auditoría) e integra el SDK oficial de **Google Gemini** (`@google/genai`) con el modelo de baja latencia `gemini-3.8-flash`.
 
 ---
 
@@ -31,7 +31,7 @@ Prototipo funcional (MVP) de un **Asistente Adaptado Multimodal con Inteligencia
 
 ---
 
-## ♿ Cumplimiento Estricto de Accesibilidad (WCAG 2.2 AAA)
+## ♿ Medidas de accesibilidad (siguiendo WCAG 2.2; pendiente de auditoría)
 
 - **Objetivos Táctiles (Target Size AAA - Criterio 2.5.5 / 2.5.8):** Todos los botones y controles interactivos tienen un área mínima de **64x64px**, superando los mínimos estándar.
 - **Contraste de Color:** 4 temas de alto contraste seleccionables:
@@ -135,3 +135,13 @@ Y para volver a compilar el ejecutable tras hacer cambios:
 ```bash
 npm run build:exe
 ```
+
+
+---
+
+## 🔒 Seguridad y privacidad
+
+- La clave API de Gemini se introduce en **Ajustes** en cada dispositivo. No se incluye en enlaces ni en el código QR, que se genera dentro del propio navegador.
+- La clave del archivo `.env` solo se usa en desarrollo local (`npm run dev`) y nunca se incrusta en la versión publicada.
+- Los perfiles describen **necesidades de apoyo funcionales**, no diagnósticos.
+- Las adaptaciones son propuestas: un texto solo es Lectura Fácil cuando lo validan personas con dificultades de comprensión, y siempre debe revisarlo un docente.

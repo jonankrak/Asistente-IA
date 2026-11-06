@@ -65,7 +65,7 @@ export const ProfileSelectorModal: React.FC = () => {
         {/* Paso 1: Selector de las 4 Categorías Principales */}
         <div className="space-y-2">
           <span className="block text-sm font-black uppercase tracking-wider text-a11y-primary">
-            1. Escoge el Área o Diagnóstico:
+            1. Escoge el área en la que necesita apoyo:
           </span>
           <div
             role="tablist"
@@ -100,7 +100,7 @@ export const ProfileSelectorModal: React.FC = () => {
         <div className="space-y-3" role="tabpanel" aria-label={currentCategory.title}>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="block text-sm font-black uppercase tracking-wider text-a11y-primary">
-              2. Escoge el Nivel o Grado en {currentCategory.title}:
+              2. Escoge cuánto apoyo necesita en {currentCategory.title}:
             </span>
             <span className="text-xs md:text-sm font-bold opacity-80 text-a11y-text">
               {currentCategory.subtitle}
@@ -154,7 +154,7 @@ export const ProfileSelectorModal: React.FC = () => {
                       ) : (
                         <span className="px-2.5 py-1 rounded-lg bg-sky-950/60 border border-sky-400 text-sky-200 flex items-center gap-1">
                           <FileText className="w-3.5 h-3.5" aria-hidden="true" />
-                          Lectura Fácil UNE/ATECA
+                          Lectura Fácil (pautas UNE)
                         </span>
                       )}
 

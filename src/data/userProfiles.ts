@@ -3,18 +3,18 @@ import { ProfileCategory, UserProfileId, UserProfileOption } from '../types';
 export const PROFILE_CATEGORIES: ProfileCategory[] = [
   {
     id: 'di',
-    title: 'Discapacidad Intelectual',
+    title: 'Comprender textos',
     emoji: '🧠',
-    subtitle: 'Adaptación integral de autonomía, razonamiento conceptual, lectoescritura y apoyo visual',
+    subtitle: 'Vocabulario, ideas abstractas y textos largos: ejemplos concretos, frases cortas y apoyo visual',
     options: [
       {
         id: 'di-leve',
         categoryId: 'di',
-        categoryLabel: 'Discapacidad Intelectual',
-        levelLabel: 'Leve',
-        shortTitle: 'DI Leve',
+        categoryLabel: 'Comprender textos',
+        levelLabel: 'Apoyo puntual',
+        shortTitle: 'Comprender textos · apoyo puntual',
         description:
-          'Autonomía personal en tareas cotidianas, comprensión de conceptos concretos y lectoescritura básica funcional. Requieren apoyos en contenidos abstractos.',
+          'Entiende textos sencillos y conceptos concretos; necesita ayuda con las ideas abstractas.',
         badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
@@ -27,16 +27,16 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: false,
         maxWordsPerSentence: 12,
         aiDirective:
-          'PERFIL ACTIVO: Discapacidad Intelectual Leve. El usuario tiene lectoescritura básica funcional y comprende conceptos concretos, pero necesita apoyo en ideas abstractas. Convierte cualquier concepto abstracto en ejemplos concretos de la vida cotidiana, usa vocabulario frecuente y frases cortas de hasta 12 palabras.'
+          'PERFIL DE APOYO: comprensión con apoyo puntual. Convierte cualquier concepto abstracto en ejemplos concretos de la vida cotidiana, usa vocabulario frecuente y frases cortas de hasta 12 palabras.'
       },
       {
         id: 'di-moderada',
         categoryId: 'di',
-        categoryLabel: 'Discapacidad Intelectual',
-        levelLabel: 'Moderada',
-        shortTitle: 'DI Moderada',
+        categoryLabel: 'Comprender textos',
+        levelLabel: 'Apoyo frecuente',
+        shortTitle: 'Comprender textos · apoyo frecuente',
         description:
-          'Dificultades notables en la comunicación y el razonamiento conceptual. Precisan apoyos continuos y adaptar el texto a niveles muy iniciales (con apoyo gráfico explícito).',
+          'Necesita textos muy sencillos, frases cortas y apoyo gráfico para entender la información.',
         badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
@@ -49,16 +49,16 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: true,
         maxWordsPerSentence: 8,
         aiDirective:
-          'PERFIL ACTIVO: Discapacidad Intelectual Moderada. El usuario presenta dificultades notables en comunicación y razonamiento conceptual y precisa nivel muy inicial con apoyo gráfico explícito. Usa frases de máximo 6 a 8 palabras, palabras de uso muy básico y cotidiano (sujeto + verbo + objeto directo) y apoyo visual directo.'
+          'PERFIL DE APOYO: comprensión con apoyo frecuente. Usa frases de 6 a 8 palabras como máximo, palabras de uso muy básico y cotidiano (sujeto + verbo + complemento) y apoyo visual directo.'
       },
       {
         id: 'di-grave',
         categoryId: 'di',
-        categoryLabel: 'Discapacidad Intelectual',
-        levelLabel: 'Grave / Profunda',
-        shortTitle: 'DI Grave / Profunda',
+        categoryLabel: 'Comprender textos',
+        levelLabel: 'Apoyo intenso',
+        shortTitle: 'Comprender textos · apoyo intenso',
         description:
-          'Limitaciones severas en la comunicación verbal y la autonomía; no suelen trabajar con adaptaciones textuales estándar, sino con sistemas alternativos de comunicación.',
+          'Se comunica sobre todo con pictogramas u otros sistemas de comunicación aumentativa; el texto escrito le ayuda poco.',
         badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
@@ -71,24 +71,24 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: true,
         maxWordsPerSentence: 5,
         aiDirective:
-          'PERFIL ACTIVO: Discapacidad Intelectual Grave / Profunda. El usuario requiere Sistemas Aumentativos y Alternativos de Comunicación (SAAC / Pictogramas ARASAAC) en lugar de texto estándar. Reduce cada paso a 2-4 conceptos clave ultra básicos (ej. "Beber agua", "Lavar manos", "Pedir ayuda") con verbos y sustantivos muy concretos.'
+          'PERFIL DE APOYO: comprensión con apoyo intenso mediante pictogramas. Reduce cada paso a 2-4 conceptos clave muy básicos (ej. "Beber agua", "Lavar manos", "Pedir ayuda") con verbos y sustantivos muy concretos.'
       }
     ]
   },
   {
     id: 'tea',
-    title: 'Trastorno del Espectro Autista (TEA)',
+    title: 'Entender instrucciones y anticipar rutinas',
     emoji: '🧩',
-    subtitle: 'Adaptación en comunicación social, lenguaje 100% literal, predictibilidad y confort sensorial',
+    subtitle: 'Lenguaje figurado, información implícita y cambios: lenguaje literal, pasos ordenados y apoyo visual',
     options: [
       {
         id: 'tea-grado1',
         categoryId: 'tea',
-        categoryLabel: 'Trastorno del Espectro Autista (TEA)',
-        levelLabel: 'Grado 1 (Necesita ayuda)',
-        shortTitle: 'TEA Grado 1',
+        categoryLabel: 'Entender instrucciones y anticipar rutinas',
+        levelLabel: 'Apoyo puntual',
+        shortTitle: 'Instrucciones y rutinas · apoyo puntual',
         description:
-          'Puede comunicarse con oraciones completas, pero presenta dificultades en la interacción social y en la interpretación del lenguaje figurado o el contexto implícito.',
+          'Lee frases completas, pero le cuesta el lenguaje figurado y lo que no se dice de forma explícita.',
         badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
@@ -101,16 +101,16 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: false,
         maxWordsPerSentence: 14,
         aiDirective:
-          'PERFIL ACTIVO: TEA Grado 1 (Necesita ayuda). El usuario se comunica con oraciones completas pero tiene dificultad con el lenguaje figurado y el contexto implícito. Usa lenguaje 100% literal, explícito y predecible. Explica de forma explícita cualquier norma social o intención implícita, evitando dobles sentidos, ironías, modismos o metáforas.'
+          'PERFIL DE APOYO: lenguaje literal con apoyo puntual. Usa lenguaje 100% literal, explícito y predecible. Explica de forma explícita cualquier norma o intención implícita, sin dobles sentidos, ironías, modismos ni metáforas.'
       },
       {
         id: 'tea-grado2',
         categoryId: 'tea',
-        categoryLabel: 'Trastorno del Espectro Autista (TEA)',
-        levelLabel: 'Grado 2 (Necesita ayuda notable)',
-        shortTitle: 'TEA Grado 2',
+        categoryLabel: 'Entender instrucciones y anticipar rutinas',
+        levelLabel: 'Apoyo frecuente',
+        shortTitle: 'Instrucciones y rutinas · apoyo frecuente',
         description:
-          'Capacidad de comunicación verbal limitada a frases sencillas, respuestas focales y gran rigidez cognitiva.',
+          'Entiende mejor la información en frases sencillas, con un orden fijo y sin cambios imprevistos.',
         badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
@@ -123,16 +123,16 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: true,
         maxWordsPerSentence: 7,
         aiDirective:
-          'PERFIL ACTIVO: TEA Grado 2 (Necesita ayuda notable). Comunicación verbal limitada a frases sencillas y alta rigidez cognitiva. Estructura la información como una rutina secuencial muy predecible y ordenada ("Primero...", "Después...", "Por último..."), con frases muy cortas (máximo 7 palabras), sin ambigüedades ni cambios imprevistos.'
+          'PERFIL DE APOYO: lenguaje literal y anticipación con apoyo frecuente. Estructura la información como una rutina secuencial predecible ("Primero...", "Después...", "Por último..."), con frases de 7 palabras como máximo, sin ambigüedades ni cambios imprevistos.'
       },
       {
         id: 'tea-grado3',
         categoryId: 'tea',
-        categoryLabel: 'Trastorno del Espectro Autista (TEA)',
-        levelLabel: 'Grado 3 (Necesita ayuda muy notable)',
-        shortTitle: 'TEA Grado 3',
+        categoryLabel: 'Entender instrucciones y anticipar rutinas',
+        levelLabel: 'Apoyo intenso',
+        shortTitle: 'Instrucciones y rutinas · apoyo intenso',
         description:
-          'Comunicación verbal mínima o ausente; requiere apoyo constante para cualquier actividad de aprendizaje.',
+          'Se apoya sobre todo en pictogramas y consignas muy breves para seguir una actividad.',
         badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
@@ -145,24 +145,24 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: true,
         maxWordsPerSentence: 4,
         aiDirective:
-          'PERFIL ACTIVO: TEA Grado 3 (Necesita ayuda muy notable). Comunicación verbal mínima o ausente; requiere apoyo constante y secuencias pictográficas muy elementales. Usa consignas de 2 a 4 palabras altamente visuales y concretas (acción + objeto), ideales para tableros de pictogramas ARASAAC y comunicador CAA.'
+          'PERFIL DE APOYO: anticipación con apoyo intenso mediante pictogramas. Usa consignas de 2 a 4 palabras muy visuales y concretas (acción + objeto), adecuadas para tableros de pictogramas ARASAAC.'
       }
     ]
   },
   {
     id: 'dislexia',
-    title: 'Trastornos Específicos del Aprendizaje (Dislexia / Lectoescritura)',
+    title: 'Leer con más facilidad',
     emoji: '📖',
-    subtitle: 'Adaptación en decodificación lectora, fluidez, tipografía espaciada y apoyo fonológico por voz',
+    subtitle: 'Leer el texto escrito: palabras sencillas, tipografía espaciada y lectura en voz alta',
     options: [
       {
         id: 'dislexia-leve',
         categoryId: 'dislexia',
-        categoryLabel: 'Dislexia / Lectoescritura',
-        levelLabel: 'Leve',
-        shortTitle: 'Dislexia Leve',
+        categoryLabel: 'Leer con más facilidad',
+        levelLabel: 'Apoyo puntual',
+        shortTitle: 'Leer con facilidad · apoyo puntual',
         description:
-          'Algunas dificultades para decodificar o comprender, pero el alumno puede compensarlas con apoyos puntuales o más tiempo.',
+          'Lee con algo de esfuerzo; le ayudan las palabras sencillas y algo más de tiempo.',
         badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
@@ -175,16 +175,16 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: false,
         maxWordsPerSentence: 12,
         aiDirective:
-          'PERFIL ACTIVO: Dislexia / Trastorno de Lectoescritura Leve. Evita palabras largas o trabadas difíciles de decodificar, usa frases bien puntuadas de longitud moderada (máx. 12 palabras) y destaca claramente la idea principal de cada paso.'
+          'PERFIL DE APOYO: lectura con apoyo puntual. Evita palabras largas o difíciles de descodificar, usa frases bien puntuadas de hasta 12 palabras y destaca la idea principal de cada paso.'
       },
       {
         id: 'dislexia-moderado',
         categoryId: 'dislexia',
-        categoryLabel: 'Dislexia / Lectoescritura',
-        levelLabel: 'Moderado',
-        shortTitle: 'Dislexia Moderada',
+        categoryLabel: 'Leer con más facilidad',
+        levelLabel: 'Apoyo frecuente',
+        shortTitle: 'Leer con facilidad · apoyo frecuente',
         description:
-          'Dificultades marcadas en la fluidez y comprensión; requiere adaptaciones metodológicas continuas (tipografía especial, lectura fácil, audio).',
+          'Leer le cuesta bastante; le ayudan la tipografía espaciada, las frases breves y escuchar el texto.',
         badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
@@ -197,16 +197,16 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: true,
         maxWordsPerSentence: 10,
         aiDirective:
-          'PERFIL ACTIVO: Dislexia / Trastorno de Lectoescritura Moderado. El usuario tiene dificultades marcadas en fluidez y comprensión lectora. Usa exclusivamente palabras cortas y transparentes (máximo 3-4 sílabas), evita palabras visual o fonéticamente parecidas que generen confusión, y redacta frases muy breves (máximo 10 palabras) pensadas para ser escuchadas con apoyo de voz.'
+          'PERFIL DE APOYO: lectura con apoyo frecuente. Usa palabras cortas y transparentes (3-4 sílabas como máximo), evita palabras visual o fonéticamente parecidas y redacta frases de hasta 10 palabras pensadas para escucharse en voz alta.'
       },
       {
         id: 'dislexia-grave',
         categoryId: 'dislexia',
-        categoryLabel: 'Dislexia / Lectoescritura',
-        levelLabel: 'Grave',
-        shortTitle: 'Dislexia Grave',
+        categoryLabel: 'Leer con más facilidad',
+        levelLabel: 'Apoyo intenso',
+        shortTitle: 'Leer con facilidad · apoyo intenso',
         description:
-          'Incapacidad o gran dificultad para la decodificación automatizada, lo que impide la lectura autónoma sin apoyos intensivos.',
+          'Necesita escuchar el texto y apoyarse en pictogramas para acceder a la información.',
         badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
@@ -219,24 +219,24 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: true,
         maxWordsPerSentence: 7,
         aiDirective:
-          'PERFIL ACTIVO: Dislexia / Trastorno de Lectoescritura Grave. Gran dificultad para la decodificación automatizada; requiere apoyo auditivo (TTS) y pictográfico intensivo. Usa frases mínimas (4 a 7 palabras) con vocabulario bisílabo o trisílabo muy sencillo y apoyo directo de pictogramas y lectura en voz alta.'
+          'PERFIL DE APOYO: lectura con apoyo intenso por voz y pictogramas. Usa frases de 4 a 7 palabras con vocabulario muy sencillo, pensadas para lectura en voz alta y acompañadas de pictogramas.'
       }
     ]
   },
   {
     id: 'tdah',
-    title: 'TDAH (Déficit de Atención e Hiperactividad)',
+    title: 'Mantener la atención y seguir pasos',
     emoji: '⚡',
-    subtitle: 'Adaptación mediante fragmentación de tareas, foco en el paso activo y pausas guiadas',
+    subtitle: 'Mantener la atención en textos largos: pasos breves, una idea cada vez y pausas',
     options: [
       {
         id: 'tdah-leve',
         categoryId: 'tdah',
-        categoryLabel: 'TDAH',
-        levelLabel: 'Leve',
-        shortTitle: 'TDAH Leve',
+        categoryLabel: 'Mantener la atención y seguir pasos',
+        levelLabel: 'Apoyo puntual',
+        shortTitle: 'Atención y pasos · apoyo puntual',
         description:
-          'Pocos síntomas de inatención o impulsividad que interfieren mínimamente en el rendimiento escolar.',
+          'Sigue bien las tareas si los pasos son claros y empiezan por una acción.',
         badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
@@ -249,16 +249,16 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: false,
         maxWordsPerSentence: 12,
         aiDirective:
-          'PERFIL ACTIVO: TDAH Leve. Organiza la información en pasos claros, directos y accionables, comenzando cada paso con un verbo de acción para mantener el foco y evitar que se salte detalles por impulsividad.'
+          'PERFIL DE APOYO: atención con apoyo puntual. Organiza la información en pasos claros y accionables, empezando cada paso con un verbo de acción.'
       },
       {
         id: 'tdah-moderado',
         categoryId: 'tdah',
-        categoryLabel: 'TDAH',
-        levelLabel: 'Moderado',
-        shortTitle: 'TDAH Moderado',
+        categoryLabel: 'Mantener la atención y seguir pasos',
+        levelLabel: 'Apoyo frecuente',
+        shortTitle: 'Atención y pasos · apoyo frecuente',
         description:
-          'Dificultad para mantener la atención en textos largos, requiriendo fragmentación del contenido y formato estructurado.',
+          'Le cuesta mantener la atención en textos largos; le ayudan los pasos breves y el formato ordenado.',
         badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
@@ -271,16 +271,16 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: true,
         maxWordsPerSentence: 9,
         aiDirective:
-          'PERFIL ACTIVO: TDAH Moderado. El usuario tiene dificultad para mantener la atención en textos largos. Fragmenta el contenido en micro-tareas muy concretas y breves (máximo 8-10 palabras por paso), eliminando todo texto de relleno y usando un formato altamente estructurado.'
+          'PERFIL DE APOYO: atención con apoyo frecuente. Fragmenta el contenido en pasos muy concretos y breves (8-10 palabras por paso como máximo), sin texto de relleno y con un formato muy estructurado.'
       },
       {
         id: 'tdah-grave',
         categoryId: 'tdah',
-        categoryLabel: 'TDAH',
-        levelLabel: 'Grave',
-        shortTitle: 'TDAH Grave',
+        categoryLabel: 'Mantener la atención y seguir pasos',
+        levelLabel: 'Apoyo intenso',
+        shortTitle: 'Atención y pasos · apoyo intenso',
         description:
-          'Altamente distractor, exige tareas muy breves, guiadas y con constantes pausas de descanso.',
+          'Trabaja mejor con pasos muy cortos, guiados y con pausas entre ellos.',
         badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
@@ -293,7 +293,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         stepByStepFocus: true,
         maxWordsPerSentence: 6,
         aiDirective:
-          'PERFIL ACTIVO: TDAH Grave. El usuario se distrae con gran facilidad y exige tareas ultra breves, muy guiadas y con pausas de descanso. Divide la actividad en micro-pasos de máximo 6 palabras cada uno e INTERCALA explícitamente pasos cortos de pausa/descanso y autoverificación cada 2 o 3 acciones (ej. "⏸️ Pausa breve: respira hondo y descansa 30 segundos antes de seguir").'
+          'PERFIL DE APOYO: atención con apoyo intenso. Divide la actividad en pasos de 6 palabras como máximo e intercala pausas breves y comprobaciones cada 2 o 3 pasos (ej. "⏸️ Pausa breve: respira y descansa 30 segundos antes de seguir").'
       }
     ]
   }
@@ -306,6 +306,6 @@ export const ALL_USER_PROFILES: UserProfileOption[] = PROFILE_CATEGORIES.flatMap
 export function getUserProfileById(id: UserProfileId | null | undefined): UserProfileOption {
   return (
     ALL_USER_PROFILES.find((p) => p.id === id) ||
-    ALL_USER_PROFILES[0] // Por defecto: Discapacidad Intelectual Leve
+    ALL_USER_PROFILES[0] // Por defecto: comprensión con apoyo puntual
   );
 }

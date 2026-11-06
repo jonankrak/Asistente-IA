@@ -1,0 +1,57 @@
+name: Desplegar en GitHub Pages
+
+on:
+  # Se ejecuta automáticamente al subir cambios a la rama main o master
+  push:
+    branches: ['main', 'master']
+  # Permite ejecutarlo manualmente desde la pestaña Actions de GitHub
+  workflow_dispatch:
+
+# Permisos necesarios para publicar en GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Solo un despliegue simultáneo
+concurrency:
+  group: 'pages'
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar aplicación PWA para producción
+        env:
+          # Opcional: si añades VITE_GEMINI_API_KEY en Settings > Secrets and variables > Actions de GitHub,
+          # la web tendrá la clave preconfigurada. Si no, puedes ponerla desde Ajustes (⚙️) en el móvil o por QR.
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+        run: npm run build
+
+      - name: Configurar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir carpeta dist lista para publicar
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

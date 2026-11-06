@@ -150,7 +150,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const [cognitiveFormat, setCognitiveFormatState] = useState<CognitiveOutputFormat>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.COGNITIVE_FORMAT) as CognitiveOutputFormat;
-    return saved && ['easy-read', 'pictograms', 'full-document'].includes(saved)
+    return saved && ['easy-read', 'pictograms'].includes(saved)
       ? saved
       : userProfile.recommendedFormat;
   });
@@ -196,21 +196,17 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
   });
 
   const [apiKey, setApiKeyState] = useState<string>(() => {
-    let hashKey = '';
+    // Seguridad: si alguien abre un enlace antiguo con la clave en la dirección (#key=...),
+    // se borra de la barra de direcciones y NO se guarda.
     if (typeof window !== 'undefined' && window.location.hash.includes('key=')) {
-      const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-      const extracted = (params.get('key') || '').trim();
-      if (extracted.length > 10) {
-        hashKey = extracted;
-        localStorage.setItem(STORAGE_KEYS.API_KEY, hashKey);
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        devLogger.success('Config', 'Clave API configurada automáticamente desde enlace/QR móvil');
-      }
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
 
-    const envKey = (import.meta.env.VITE_GEMINI_API_KEY || '').trim();
+    // La clave del archivo .env solo se usa en desarrollo local (npm run dev).
+    // Así nunca queda incrustada en la versión publicada en GitHub Pages.
+    const envKey = import.meta.env.DEV ? (import.meta.env.VITE_GEMINI_API_KEY || '').trim() : '';
     const saved = (localStorage.getItem(STORAGE_KEYS.API_KEY) || '').trim();
-    const initialKey = hashKey || (saved && saved.length > 10 ? saved : envKey);
+    const initialKey = saved && saved.length > 10 ? saved : envKey;
     aiService.updateApiKey(initialKey);
     return initialKey;
   });
@@ -464,7 +460,13 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       }
 
       if (!isInput) {
-        if (e.key === 'p' || e.key === 'P') {
+        if (e.key === '1') {
+          setMode('visual');
+        } else if (e.key === '2') {
+          setMode('cognitive');
+        } else if (e.key === '3') {
+          setMode('auditory');
+        } else if (e.key === 'p' || e.key === 'P') {
           setIsProfileModalOpen((prev) => !prev);
         } else if (e.key === 's' || e.key === 'S') {
           setIsSettingsOpen((prev) => !prev);

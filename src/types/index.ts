@@ -62,21 +62,7 @@ export interface CognitiveResult {
   steps: EasyReadStep[];
 }
 
-export type CognitiveOutputFormat = 'easy-read' | 'pictograms' | 'full-document';
-
-export interface GlossaryItem {
-  term: string;
-  definition: string;
-}
-
-export interface FullAccessibleDocument {
-  title: string;
-  summary: string;
-  fullTextParagraphs: string[];
-  steps: EasyReadStep[];
-  glossary: GlossaryItem[];
-  pictogramTokens: PictogramToken[];
-}
+export type CognitiveOutputFormat = 'easy-read' | 'pictograms';
 
 /** Una palabra clave dentro de una frase, enlazada (si existe) a un pictograma ARASAAC */
 export interface PictogramToken {

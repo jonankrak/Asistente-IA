@@ -1,30 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
+  Camera,
+  Mic,
   CheckCircle2,
   Circle,
   Volume2,
-  Sparkles,
   RotateCcw,
+  Upload,
   FileText,
   Images,
   ShieldCheck,
   AlertTriangle,
   XCircle,
   UserCheck,
-  Download
+  ThumbsUp,
+  RefreshCw,
+  Feather,
+  Pencil,
+  ScrollText
 } from 'lucide-react';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { useSpeech } from '../hooks/useSpeech';
+import { useCamera } from '../hooks/useCamera';
 import { useHaptics } from '../hooks/useHaptics';
 import { aiService } from '../services/aiService';
 import { validateEasyRead, summarizeChecks } from '../services/easyReadValidator';
 import { ARASAAC_ATTRIBUTION } from '../services/arasaacService';
-import { exportAccessibleDocumentToPdf } from '../services/pdfExportService';
 import {
   EasyReadStep,
   PictogramPhrase,
-  GuidelineCheck,
-  FullAccessibleDocument
+  GuidelineCheck
 } from '../types';
 
 export const CognitiveMode: React.FC = () => {
@@ -35,9 +40,8 @@ export const CognitiveMode: React.FC = () => {
     hasApiKey,
     userProfile,
     setIsProfileModalOpen,
-    setIsSettingsOpen,
-    isProfileControlEnabled,
     cognitiveFormat: outputFormat,
+    setCognitiveFormat,
     autoSpeak,
     stepByStepFocus,
     maxWordsPerSentence
@@ -47,9 +51,15 @@ export const CognitiveMode: React.FC = () => {
   const [inputText, setInputText] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Estado Apartado 1: Lectura Fácil (UNE 153101:2018 EX + ATECA)
   const [summary, setSummary] = useState<string>('');
+  // Revisión docente y respuesta del alumno sobre la adaptación
+  const [isEditing, setIsEditing] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [understood, setUnderstood] = useState(false);
+  const [adaptedFromText, setAdaptedFromText] = useState<string>('');
   const [steps, setSteps] = useState<EasyReadStep[]>([]);
   const [guidelineChecks, setGuidelineChecks] = useState<GuidelineCheck[]>([]);
   const [showAtecaDetails, setShowAtecaDetails] = useState<boolean>(true);
@@ -58,133 +68,123 @@ export const CognitiveMode: React.FC = () => {
   const [pictoTitle, setPictoTitle] = useState<string>('');
   const [pictoPhrases, setPictoPhrases] = useState<PictogramPhrase[]>([]);
 
-  // Estado Apartado 3: Documento Completo Unificado (Texto íntegro IA + Extracción PDF)
-  const [fullDocument, setFullDocument] = useState<FullAccessibleDocument | null>(null);
-  const [isGeneratingFullDoc, setIsGeneratingFullDoc] = useState<boolean>(false);
-  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraNativeInputRef = useRef<HTMLInputElement | null>(null);
 
-  const { speak, stopSpeaking } = useSpeech({
-    rate: speechRate
+  const {
+    videoRef,
+    isCameraActive,
+    startCamera,
+    stopCamera,
+    captureFrame
+  } = useCamera();
+
+  const {
+    isListening,
+    startListening,
+    stopListening,
+    speak,
+    stopSpeaking
+  } = useSpeech({
+    rate: speechRate,
+    onTranscriptChange: (text) => setInputText(text)
   });
 
-  // Generar un Documento Completo con IA que contenga todo el texto y extraerlo como PDF
-  const handleGenerateFullDocumentAndPdf = async (autoDownloadPdf: boolean = true) => {
-    setErrorMsg(null);
-    stopSpeaking();
-
-    if (!inputText.trim()) {
-      const err = 'Por favor escribe o pega un texto primero.';
-      setErrorMsg(err);
-      announce(err, 'assertive');
-      return;
-    }
-
-    if (!hasApiKey) {
-      const err = 'Falta configurar la Clave API de Gemini. Ve a Ajustes.';
-      setErrorMsg(err);
-      announce(err, 'assertive');
-      return;
-    }
-
-    setIsGeneratingFullDoc(true);
-
-    try {
-      announce(
-        'Generando con IA un documento de texto completo con todo el contenido adaptado y preparando el archivo PDF...',
-        'assertive'
-      );
-
-      const docResult = await aiService.generateFullDocument({
-        text: inputText.trim()
-      });
-
-      setFullDocument(docResult);
-
-      const linesToValidate = [
-        docResult.summary,
-        ...docResult.fullTextParagraphs,
-        ...docResult.steps.map((s) => s.instruction)
-      ].filter(Boolean);
-      const checks = validateEasyRead(linesToValidate, maxWordsPerSentence);
-      setGuidelineChecks(checks);
-
-      setIsGeneratingFullDoc(false);
-      if (hapticEnabled) triggerSuccess();
-
-      if (autoDownloadPdf) {
-        setIsExportingPdf(true);
-        await exportAccessibleDocumentToPdf({
-          title: docResult.title,
-          userProfile,
-          summary: docResult.summary,
-          fullDocument: docResult,
-          steps: docResult.steps,
-          guidelineChecks: checks
-        });
-        setIsExportingPdf(false);
-        announce(
-          `Documento completo "${docResult.title}" generado y descargado como archivo PDF.`,
-          'assertive'
-        );
+  // Alternar vista de cámara (con fallback a cámara nativa de Android Chrome)
+  const handleToggleCamera = async () => {
+    if (isCameraActive) {
+      stopCamera();
+    } else {
+      const started = await startCamera('environment');
+      if (started) {
+        announce('Cámara activada para fotografiar documento', 'polite');
       } else {
-        announce(
-          `Documento completo "${docResult.title}" generado correctamente. Pulsa Extraer como PDF para descargarlo.`,
-          'assertive'
-        );
+        cameraNativeInputRef.current?.click();
       }
-
-      if (autoSpeak) {
-        speak(`${docResult.title}. ${docResult.summary}. ${docResult.fullTextParagraphs[0] || ''}`);
-      }
-    } catch (err: any) {
-      const msg = err.message || 'Error al generar el documento completo con IA.';
-      setErrorMsg(msg);
-      setIsGeneratingFullDoc(false);
-      setIsExportingPdf(false);
-      if (hapticEnabled) triggerError();
-      announce(msg, 'assertive');
     }
   };
 
-  // Extraer / Descargar como PDF el contenido actual en pantalla
-  const handleDownloadPdf = async () => {
+  // Capturar fotograma de documento
+  const handleCaptureDocument = () => {
     if (hapticEnabled) triggerShort();
-    setIsExportingPdf(true);
-    announce('Extrayendo documento como archivo PDF...', 'polite');
-    try {
-      await exportAccessibleDocumentToPdf({
-        title:
-          fullDocument?.title ||
-          pictoTitle ||
-          (summary ? summary.slice(0, 60) : 'Documento Adaptado en Lectura Fácil'),
-        userProfile,
-        summary: fullDocument?.summary || summary,
-        fullDocument,
-        steps: fullDocument?.steps?.length ? fullDocument.steps : steps,
-        pictoPhrases,
-        guidelineChecks
-      });
-      if (hapticEnabled) triggerSuccess();
-      announce('Archivo PDF extraído y descargado correctamente.', 'assertive');
-    } catch {
-      announce('No se pudo exportar el PDF.', 'assertive');
-    } finally {
-      setIsExportingPdf(false);
+    const frame = captureFrame();
+    if (frame) {
+      setPreviewImage(frame.fullDataUrl);
+      stopCamera();
+      announce('Foto de documento capturada. Pulsa el botón principal para procesar.', 'assertive');
     }
   };
 
-  // Procesar según el apartado activo (Lectura Fácil UNE/ATECA, Pictogramas ARASAAC o Documento Completo PDF)
-  const handleProcess = async () => {
-    if (outputFormat === 'full-document') {
-      await handleGenerateFullDocumentAndPdf(true);
-      return;
-    }
+  // Optimizar y reducir fotos pesadas a tamaño web ligero
+  const compressImage = (dataUrl: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1024;
+        let w = img.width;
+        let h = img.height;
+        if (w > MAX_DIM || h > MAX_DIM) {
+          if (w > h) {
+            h = Math.round((h * MAX_DIM) / w);
+            w = MAX_DIM;
+          } else {
+            w = Math.round((w * MAX_DIM) / h);
+            h = MAX_DIM;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
+        } else {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  };
 
+  // Subir imagen desde galería/archivo
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const result = reader.result as string;
+      announce('Comprimiendo imagen para procesamiento rápido...', 'polite');
+      const optimized = await compressImage(result);
+      setPreviewImage(optimized);
+      announce('Documento cargado y optimizado correctamente.', 'polite');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Dictado por voz
+  const handleToggleMic = () => {
+    if (hapticEnabled) triggerShort();
+    if (isListening) {
+      stopListening();
+      announce('Dictado finalizado.', 'polite');
+    } else {
+      startListening();
+      announce('Escuchando lo que deseas adaptar...', 'polite');
+    }
+  };
+
+  // Procesar según el apartado activo (Lectura Fácil UNE/ATECA o Pictogramas ARASAAC)
+  const handleProcess = async (refinement?: 'simpler' | 'alternative') => {
     setErrorMsg(null);
+    setUnderstood(false);
+    setIsEditing(false);
     stopSpeaking();
 
-    if (!inputText.trim()) {
-      const err = 'Por favor escribe o pega el texto que deseas adaptar.';
+    if (!inputText.trim() && !previewImage) {
+      const err = 'Por favor escribe un texto o haz una foto a un documento.';
       setErrorMsg(err);
       announce(err, 'assertive');
       return;
@@ -198,20 +198,33 @@ export const CognitiveMode: React.FC = () => {
     }
 
     setIsLoading(true);
+    let base64Clean: string | undefined = undefined;
+    if (previewImage) {
+      base64Clean = previewImage.replace(/^data:image\/[a-z]+;base64,/, '');
+    }
 
     try {
       if (outputFormat === 'easy-read') {
         announce(
-          'Adaptando texto a Lectura Fácil con pautas UNE 153101 y herramienta ATECA...',
+          'Adaptando texto siguiendo las pautas de Lectura Fácil (UNE 153101)...',
           'assertive'
         );
 
+        const previousVersion =
+          refinement && steps.length > 0
+            ? [summary, ...steps.map((st) => `${st.stepNumber}. ${st.instruction}`)].join('\n')
+            : undefined;
+
         const result = await aiService.simplifyToEasyRead({
-          text: inputText.trim()
+          text: inputText.trim() || undefined,
+          base64Image: base64Clean,
+          refinement,
+          previousVersion
         });
 
         setSummary(result.summary);
         setSteps(result.steps);
+        setAdaptedFromText(inputText.trim());
 
         // Ejecutar validador automático UNE 153101:2018 EX + ATECA con el límite de palabras activo
         const linesToValidate = [
@@ -237,12 +250,21 @@ export const CognitiveMode: React.FC = () => {
           'assertive'
         );
 
+        const previousPictos =
+          refinement && pictoPhrases.length > 0
+            ? [pictoTitle, ...pictoPhrases.map((ph) => `${ph.stepNumber}. ${ph.text}`)].join('\n')
+            : undefined;
+
         const result = await aiService.generatePictograms({
-          text: inputText.trim()
+          text: inputText.trim() || undefined,
+          base64Image: base64Clean,
+          refinement,
+          previousVersion: previousPictos
         });
 
         setPictoTitle(result.title);
         setPictoPhrases(result.phrases);
+        setAdaptedFromText(inputText.trim());
         setIsLoading(false);
         if (hapticEnabled) triggerSuccess();
 
@@ -323,6 +345,98 @@ export const CognitiveMode: React.FC = () => {
     speak(word);
   };
 
+  // El docente corrige un paso: se vuelve a comprobar el texto con las pautas
+  const updateStepText = (id: string, text: string) => {
+    const updated = steps.map((st) => (st.id === id ? { ...st, instruction: text } : st));
+    setSteps(updated);
+    setGuidelineChecks(
+      validateEasyRead([summary, ...updated.map((st) => st.instruction)].filter(Boolean), maxWordsPerSentence)
+    );
+  };
+
+  const handleUnderstood = () => {
+    setUnderstood(true);
+    announce('Muy bien. Has entendido el texto.', 'polite');
+    if (hapticEnabled) triggerSuccess();
+  };
+
+  // Bloque común: respuesta del alumno sobre la adaptación (Texto fácil y Pictogramas)
+  const comprehensionFeedback = (
+    <section
+      aria-labelledby="comprension-titulo"
+      className="p-5 rounded-3xl border-2 border-a11y-border bg-a11y-card space-y-4"
+    >
+      <h3 id="comprension-titulo" className="text-xl md:text-2xl font-bold text-a11y-text">
+        ¿Lo has entendido?
+      </h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button
+          onClick={handleUnderstood}
+          disabled={isLoading}
+          aria-pressed={understood}
+          className={`touch-target min-h-[72px] px-4 py-3 rounded-3xl border-2 font-bold text-lg flex items-center justify-center gap-3 ${
+            understood
+              ? 'bg-a11y-accent text-black border-a11y-accent'
+              : 'border-a11y-border text-a11y-text hover:border-a11y-accent'
+          }`}
+        >
+          <ThumbsUp className="w-7 h-7 shrink-0" aria-hidden="true" />
+          <span>Lo he entendido</span>
+        </button>
+        <button
+          onClick={() => handleProcess('alternative')}
+          disabled={isLoading}
+          className="touch-target min-h-[72px] px-4 py-3 rounded-3xl border-2 border-a11y-border text-a11y-text font-bold text-lg flex items-center justify-center gap-3 hover:border-a11y-primary disabled:opacity-60"
+        >
+          <RefreshCw className="w-7 h-7 shrink-0" aria-hidden="true" />
+          <span>Otra versión</span>
+        </button>
+        <button
+          onClick={() => handleProcess('simpler')}
+          disabled={isLoading}
+          className="touch-target min-h-[72px] px-4 py-3 rounded-3xl border-2 border-a11y-border text-a11y-text font-bold text-lg flex items-center justify-center gap-3 hover:border-a11y-primary disabled:opacity-60"
+        >
+          <Feather className="w-7 h-7 shrink-0" aria-hidden="true" />
+          <span>Más fácil</span>
+        </button>
+      </div>
+      {understood && (
+        <p className="text-lg font-bold text-a11y-text" role="status">
+          ¡Muy bien!
+        </p>
+      )}
+      {isLoading && (
+        <p className="text-lg font-bold text-a11y-text" role="status">
+          Preparando otra versión…
+        </p>
+      )}
+    </section>
+  );
+
+  // Bloque común: botón y panel para comparar con el texto original
+  const originalToggleButton = adaptedFromText ? (
+      <button
+        onClick={() => setShowOriginal(!showOriginal)}
+        aria-expanded={showOriginal}
+        aria-controls="texto-original"
+        className="touch-target min-h-[48px] px-4 py-2 rounded-full border-2 border-a11y-border text-a11y-text font-bold text-base flex items-center gap-2 hover:border-a11y-primary"
+      >
+        <ScrollText className="w-5 h-5 shrink-0" aria-hidden="true" />
+        <span>{showOriginal ? 'Ocultar texto original' : 'Ver texto original'}</span>
+      </button>
+  ) : null;
+
+  const originalPanel =
+    showOriginal && adaptedFromText ? (
+      <div
+        id="texto-original"
+        className="p-5 rounded-3xl border-2 border-dashed border-a11y-border bg-a11y-bg text-a11y-text space-y-2"
+      >
+        <p className="text-sm font-bold opacity-80">Texto original</p>
+        <p className="text-lg leading-relaxed whitespace-pre-wrap">{adaptedFromText}</p>
+      </div>
+    ) : null;
+
   const completedStepsCount = steps.filter((s) => s.completed).length;
   const completedPhrasesCount = pictoPhrases.filter((p) => p.completed).length;
   const atecaSummary = summarizeChecks(guidelineChecks);
@@ -330,199 +444,225 @@ export const CognitiveMode: React.FC = () => {
   const firstPendingPhraseId = pictoPhrases.find((p) => !p.completed)?.id;
 
   return (
-    <div className="w-full flex-1 max-w-4xl mx-auto p-4 md:p-6 space-y-6">
-      {/* Encabezado del Modo Cognitivo */}
-      <div className="border-4 border-a11y-border bg-a11y-card p-5 rounded-3xl space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex-1 min-w-[240px]">
-            <h2 className="text-2xl md:text-3xl font-black text-a11y-text flex items-center gap-3">
-              <Sparkles className="w-9 h-9 text-a11y-primary shrink-0" aria-hidden="true" />
-              <span>Modo Cognitivo: Accesibilidad Cognitiva</span>
-            </h2>
-            <p className="text-lg md:text-xl font-bold opacity-90 mt-2 text-a11y-text">
-              Elige si quieres adaptar el texto a <strong>Lectura Fácil</strong> (siguiendo la{' '}
-              <strong>Norma UNE 153101:2018 EX</strong> y los criterios de la{' '}
-              <strong>herramienta ATECA</strong>) o traducirlo a una secuencia visual con{' '}
-              <strong>Pictogramas ARASAAC</strong>.
-            </p>
-          </div>
-        </div>
-
-        {/* Tarjeta del Perfil Diagnóstico / Funcional Activo */}
-        <div className="p-4 rounded-2xl border-2 border-a11y-border bg-a11y-bg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-a11y-primary">
-                Perfil de Apoyo Activo:
-              </span>
-              <span
-                className={`px-2.5 py-0.5 rounded-lg border text-xs font-black uppercase ${userProfile.badgeColor}`}
-              >
-                {userProfile.categoryLabel} — {userProfile.levelLabel}
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded-md border text-[11px] font-black uppercase ${
-                  isProfileControlEnabled
-                    ? 'bg-green-950/60 border-green-500 text-green-300'
-                    : 'bg-yellow-950/60 border-yellow-500 text-yellow-300'
-                }`}
-              >
-                {isProfileControlEnabled
-                  ? '🔒 Control Automático por Perfil'
-                  : '🛠️ Modo de Ajuste Manual'}
-              </span>
-            </div>
-            <p className="text-sm font-bold opacity-90 text-a11y-text">
-              {userProfile.description}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              onClick={() => setIsProfileModalOpen(true)}
-              className="touch-target px-4 py-2.5 rounded-xl border-2 border-a11y-border bg-a11y-primary text-a11y-primaryText font-black text-sm flex items-center gap-2 hover:brightness-105"
-              aria-label="Cambiar perfil de apoyo (Tecla P)"
-            >
-              <UserCheck className="w-5 h-5" aria-hidden="true" />
-              <span>Cambiar Perfil</span>
-            </button>
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="touch-target px-3.5 py-2.5 rounded-xl border-2 border-a11y-border bg-a11y-card text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-xs uppercase"
-              aria-label="Abrir ajustes para cambiar entre control por perfil o ajuste manual"
-            >
-              {isProfileControlEnabled ? 'Ajuste Manual' : 'Ajustes'}
-            </button>
-          </div>
-        </div>
-
-        {/* INDICADOR FIJADO DE FORMATO COGNITIVO (Se cambia únicamente por Perfil o en Ajustes) */}
-        <div
-          role="status"
-          aria-label="Formato de adaptación cognitiva fijado"
-          className="p-4 rounded-2xl border-4 border-a11y-border bg-a11y-primary text-a11y-primaryText flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md"
-        >
-          <div className="flex items-center gap-3.5">
-            {outputFormat === 'easy-read' ? (
-              <FileText className="w-9 h-9 md:w-11 md:h-11 shrink-0" aria-hidden="true" />
-            ) : (
-              <Images className="w-9 h-9 md:w-11 md:h-11 shrink-0" aria-hidden="true" />
-            )}
-            <div>
-              <span className="block text-xs font-black uppercase tracking-wider opacity-90">
-                {isProfileControlEnabled
-                  ? `🔒 Formato Fijado por Perfil (${userProfile.shortTitle}):`
-                  : '🛠️ Formato Fijado en Ajustes Manuales:'}
-              </span>
-              <span className="block text-lg sm:text-xl md:text-2xl font-black leading-tight mt-0.5">
-                {outputFormat === 'easy-read'
-                  ? 'Texto en Lectura Fácil (Norma UNE 153101:2018 EX + ATECA)'
-                  : outputFormat === 'pictograms'
-                  ? 'Secuencia Visual con Pictogramas ARASAAC'
-                  : 'Documento Completo con IA (Texto Íntegro + PDF)'}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className="touch-target px-4 py-2.5 rounded-xl border-2 border-current bg-black/15 hover:bg-black/25 font-black text-xs sm:text-sm shrink-0"
-            aria-label="Abrir Ajustes para cambiar entre Lectura Fácil y Pictogramas ARASAAC"
-          >
-            ⚙️ Cambiar en Ajustes
-          </button>
-        </div>
-      </div>
-
-      {/* Caja de texto accesible con tipografía grande (>= 20px) */}
-      <div className="space-y-3">
-        <label
-          htmlFor="cognitive-input"
-          className="block text-xl md:text-2xl font-black text-a11y-text"
-        >
-          {outputFormat === 'easy-read'
-            ? 'Escribe o pega el texto o tarea para adaptar a Lectura Fácil (UNE 153101 / ATECA):'
-            : outputFormat === 'pictograms'
-            ? 'Escribe o pega la frase, rutina o texto para crear con Pictogramas ARASAAC:'
-            : 'Escribe o pega el texto para generar un Documento Completo con IA y extraerlo en PDF:'}
-        </label>
-        <textarea
-          id="cognitive-input"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder={
-            outputFormat === 'easy-read'
-              ? 'Ej: Carta médica, contrato, apuntes escolares, notificación oficial o instrucciones de una tarea...'
-              : 'Ej: Primero me lavo las manos con agua y jabón, después como en la mesa y luego me cepillo los dientes...'
-          }
-          rows={4}
-          className="w-full p-4 rounded-2xl border-4 border-a11y-border bg-a11y-bg text-a11y-text text-xl font-bold placeholder:opacity-50 focus:outline-none"
-        />
-      </div>
-
-      {/* Botones de Acción Principal y Generación de Texto Completo en PDF */}
-      <div className="space-y-3">
+    <div className="w-full flex-1 max-w-3xl mx-auto p-4 md:p-8 space-y-8">
+      {/* Encabezado: qué hace este modo y para quién se adapta */}
+      <section aria-labelledby="leer-facil-titulo" className="space-y-3">
+        <h2 id="leer-facil-titulo" className="text-3xl md:text-4xl font-bold text-a11y-text">
+          Leer fácil
+        </h2>
+        <p className="text-lg md:text-xl text-a11y-text opacity-90 max-w-prose">
+          Convierte un texto difícil en frases cortas, con pictogramas y voz. Revisa siempre el
+          resultado antes de compartirlo.
+        </p>
         <button
-          onClick={handleProcess}
-          disabled={isLoading || isGeneratingFullDoc}
-          className="w-full touch-target min-h-[72px] py-4 px-6 rounded-2xl bg-a11y-primary text-a11y-primaryText border-4 border-a11y-border font-black text-xl sm:text-2xl md:text-3xl flex items-center justify-center gap-4 hover:brightness-105 active:scale-98 transition-transform disabled:opacity-50"
-          aria-label={
-            outputFormat === 'easy-read'
-              ? 'Simplificar texto a Lectura Fácil siguiendo Norma UNE 153101 y herramienta ATECA'
-              : outputFormat === 'pictograms'
-              ? 'Crear secuencia visual con Pictogramas de ARASAAC'
-              : 'Generar documento completo con IA y extraer como PDF'
-          }
+          onClick={() => setIsProfileModalOpen(true)}
+          className="touch-target min-h-[48px] px-4 py-2 rounded-full border-2 border-a11y-border bg-a11y-card text-a11y-text font-bold text-base flex items-center gap-2 text-left hover:border-a11y-primary"
+          aria-label={`Adaptado para: ${userProfile.shortTitle}. Pulsa para cambiar el perfil de apoyo.`}
         >
-          {outputFormat === 'easy-read' ? (
-            <>
-              <FileText className="w-8 h-8 shrink-0" aria-hidden="true" />
-              <span>
-                {isLoading
-                  ? 'ADAPTANDO SEGÚN NORMA UNE 153101 Y ATECA...'
-                  : 'SIMPLIFICAR A LECTURA FÁCIL (UNE / ATECA)'}
-              </span>
-            </>
-          ) : outputFormat === 'pictograms' ? (
-            <>
-              <Images className="w-8 h-8 shrink-0" aria-hidden="true" />
-              <span>
-                {isLoading
-                  ? 'BUSCANDO PICTOGRAMAS EN ARASAAC...'
-                  : 'CREAR CON PICTOGRAMAS ARASAAC'}
-              </span>
-            </>
-          ) : (
-            <>
-              <Download className="w-8 h-8 shrink-0" aria-hidden="true" />
-              <span>
-                {isGeneratingFullDoc
-                  ? 'GENERANDO TEXTO COMPLETO Y PDF CON IA...'
-                  : 'GENERAR TEXTO COMPLETO CON IA Y EXTRAER PDF'}
-              </span>
-            </>
-          )}
+          <UserCheck className="w-5 h-5 shrink-0 text-a11y-primary" aria-hidden="true" />
+          <span>Adaptado para: {userProfile.shortTitle}</span>
+          <span className="underline underline-offset-4 text-a11y-primary">Cambiar</span>
         </button>
+      </section>
 
-        {/* Opción directa siempre visible para que la IA redacte un texto que lo contenga todo y se extraiga como PDF */}
-        {outputFormat !== 'full-document' && (
-          <button
-            type="button"
-            onClick={() => handleGenerateFullDocumentAndPdf(true)}
-            disabled={isLoading || isGeneratingFullDoc}
-            className="w-full touch-target min-h-[64px] py-3.5 px-5 rounded-2xl border-4 border-a11y-border bg-a11y-card text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-base sm:text-xl flex items-center justify-center gap-3 transition-colors disabled:opacity-50"
-            aria-label="Generar con la IA un documento de texto completo que contenga todo y extraerlo como archivo PDF"
+      <ol className="list-none p-0 m-0 space-y-8">
+        {/* Paso 1: el texto */}
+        <li className="space-y-3">
+          <label
+            htmlFor="cognitive-input"
+            className="flex items-center gap-3 text-xl md:text-2xl font-bold text-a11y-text"
           >
-            <Download className="w-7 h-7 shrink-0 text-a11y-primary" aria-hidden="true" />
+            <span
+              className="w-9 h-9 rounded-full bg-a11y-primary text-a11y-primaryText flex items-center justify-center text-lg shrink-0"
+              aria-hidden="true"
+            >
+              1
+            </span>
+            <span>Pon el texto</span>
+          </label>
+          <textarea
+            id="cognitive-input"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={
+              outputFormat === 'easy-read'
+                ? 'Pega o escribe aquí el texto: un enunciado, una circular, unas normas…'
+                : 'Escribe aquí la rutina o la frase: primero me lavo las manos, después…'
+            }
+            rows={5}
+            className="w-full p-4 md:p-5 rounded-3xl border-2 border-a11y-border bg-a11y-card text-a11y-text text-xl leading-relaxed placeholder:text-a11y-text placeholder:opacity-60 focus:border-a11y-primary"
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="hidden sm:inline text-base text-a11y-text opacity-80 mr-1">O usa:</span>
+            <button
+              onClick={handleToggleCamera}
+              className={`touch-target min-h-[48px] px-3 sm:px-4 py-2 rounded-full border-2 font-bold text-base flex items-center gap-2 transition-colors ${
+                isCameraActive
+                  ? 'bg-a11y-alert text-black border-a11y-alert'
+                  : 'bg-transparent text-a11y-text border-a11y-border hover:border-a11y-primary'
+              }`}
+              aria-label={isCameraActive ? 'Cerrar la cámara' : 'Hacer una foto a un documento'}
+            >
+              <Camera className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <span>{isCameraActive ? 'Cerrar cámara' : 'Foto'}</span>
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="touch-target min-h-[48px] px-3 sm:px-4 py-2 rounded-full border-2 border-a11y-border bg-transparent text-a11y-text font-bold text-base flex items-center gap-2 hover:border-a11y-primary"
+              aria-label="Subir una imagen desde tus archivos o la galería"
+            >
+              <Upload className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <span>Imagen</span>
+            </button>
+            <button
+              onClick={handleToggleMic}
+              className={`touch-target min-h-[48px] px-3 sm:px-4 py-2 rounded-full border-2 font-bold text-base flex items-center gap-2 transition-colors ${
+                isListening
+                  ? 'bg-a11y-primary text-a11y-primaryText border-a11y-primary'
+                  : 'bg-transparent text-a11y-text border-a11y-border hover:border-a11y-primary'
+              }`}
+              aria-label={isListening ? 'Parar el dictado' : 'Dictar el texto con la voz'}
+            >
+              <Mic className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <span>{isListening ? 'Parar dictado' : 'Dictar'}</span>
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept="image/*"
+              className="hidden"
+              aria-hidden="true"
+            />
+            <input
+              type="file"
+              ref={cameraNativeInputRef}
+              onChange={handleFileUpload}
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              aria-hidden="true"
+            />
+          </div>
+
+          {isCameraActive && (
+            <div className="relative w-full rounded-3xl overflow-hidden border-2 border-a11y-border bg-black aspect-video max-h-80">
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                autoPlay
+                className="w-full h-full object-cover"
+                aria-label="Cámara para fotografiar el documento"
+              />
+              <button
+                onClick={handleCaptureDocument}
+                className="absolute bottom-4 left-1/2 -translate-x-1/2 touch-target px-6 py-3 rounded-full bg-a11y-primary text-a11y-primaryText font-bold text-lg"
+              >
+                Hacer la foto
+              </button>
+            </div>
+          )}
+
+          {previewImage && !isCameraActive && (
+            <div className="flex items-center gap-4 p-3 rounded-3xl border-2 border-a11y-border bg-a11y-card">
+              <img
+                src={previewImage}
+                alt="Vista previa del documento"
+                className="w-20 h-20 object-cover rounded-2xl shrink-0"
+              />
+              <p className="flex-1 font-bold text-lg text-a11y-text">Foto lista para adaptar</p>
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="touch-target min-h-[44px] px-4 py-2 rounded-full border-2 border-a11y-border text-a11y-text font-bold"
+                aria-label="Quitar la foto"
+              >
+                Quitar
+              </button>
+            </div>
+          )}
+        </li>
+
+        {/* Paso 2: el formato */}
+        <li className="space-y-3">
+          <p
+            id="formato-titulo"
+            className="flex items-center gap-3 text-xl md:text-2xl font-bold text-a11y-text"
+          >
+            <span
+              className="w-9 h-9 rounded-full bg-a11y-primary text-a11y-primaryText flex items-center justify-center text-lg shrink-0"
+              aria-hidden="true"
+            >
+              2
+            </span>
+            <span>Elige cómo verlo</span>
+          </p>
+          <div role="radiogroup" aria-labelledby="formato-titulo" className="grid grid-cols-2 gap-3">
+            {(
+              [
+                {
+                  value: 'easy-read',
+                  label: 'Texto fácil',
+                  hint: 'Frases cortas y claras',
+                  icon: <FileText className="w-7 h-7 shrink-0" aria-hidden="true" />
+                },
+                {
+                  value: 'pictograms',
+                  label: 'Pictogramas',
+                  hint: 'Una imagen por cada idea',
+                  icon: <Images className="w-7 h-7 shrink-0" aria-hidden="true" />
+                }
+              ] as const
+            ).map((opt) => {
+              const selected = outputFormat === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setCognitiveFormat(opt.value)}
+                  className={`touch-target min-h-[80px] p-4 rounded-3xl border-2 text-left flex items-center gap-3 transition-colors ${
+                    selected
+                      ? 'border-a11y-primary bg-a11y-card text-a11y-text ring-2 ring-a11y-primary'
+                      : 'border-a11y-border bg-transparent text-a11y-text hover:border-a11y-primary'
+                  }`}
+                >
+                  <span className={selected ? 'text-a11y-primary' : ''}>{opt.icon}</span>
+                  <span className="flex flex-col">
+                    <span className="font-bold text-lg leading-tight">{opt.label}</span>
+                    <span className="text-sm opacity-80 leading-tight">{opt.hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </li>
+
+        {/* Paso 3: adaptar */}
+        <li>
+          <button
+            onClick={() => handleProcess()}
+            disabled={isLoading}
+            className="w-full touch-target min-h-[72px] py-4 px-6 rounded-full bg-a11y-primary text-a11y-primaryText font-bold text-2xl flex items-center justify-center gap-3 hover:brightness-105 disabled:opacity-60"
+          >
+            {outputFormat === 'easy-read' ? (
+              <FileText className="w-7 h-7 shrink-0" aria-hidden="true" />
+            ) : (
+              <Images className="w-7 h-7 shrink-0" aria-hidden="true" />
+            )}
             <span>
-              {isGeneratingFullDoc
-                ? 'REDACTANDO DOCUMENTO COMPLETO CON IA Y CREANDO PDF...'
-                : '📄 GENERAR TEXTO COMPLETO CON IA (CON TODO) Y EXTRAER COMO PDF'}
+              {isLoading
+                ? outputFormat === 'easy-read'
+                  ? 'Adaptando el texto…'
+                  : 'Buscando pictogramas…'
+                : outputFormat === 'easy-read'
+                ? 'Adaptar texto'
+                : 'Crear pictogramas'}
             </span>
           </button>
-        )}
-      </div>
+        </li>
+      </ol>
 
       {/* Mensaje de Error si ocurre */}
       {errorMsg && (
@@ -542,8 +682,26 @@ export const CognitiveMode: React.FC = () => {
         <div
           className="space-y-6 pt-4 border-t-4 border-a11y-border"
           role="region"
-          aria-label="Resultados de Lectura Fácil y validación UNE 153101 y ATECA"
+          aria-label="Resultados de Lectura Fácil y comprobación de pautas UNE 153101"
         >
+          {/* Herramientas de revisión docente */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              aria-pressed={isEditing}
+              className={`touch-target min-h-[48px] px-4 py-2 rounded-full border-2 font-bold text-base flex items-center gap-2 ${
+                isEditing
+                  ? 'bg-a11y-primary text-a11y-primaryText border-a11y-primary'
+                  : 'border-a11y-border text-a11y-text hover:border-a11y-primary'
+              }`}
+            >
+              <Pencil className="w-5 h-5 shrink-0" aria-hidden="true" />
+              <span>{isEditing ? 'Terminar de editar' : 'Editar (docente)'}</span>
+            </button>
+            {originalToggleButton}
+          </div>
+          {originalPanel}
+
           {/* PANEL DE VALIDACIÓN NORMA UNE 153101:2018 EX + HERRAMIENTA ATECA */}
           {guidelineChecks.length > 0 && (
             <div className="p-5 rounded-3xl border-4 border-a11y-border bg-a11y-card space-y-4">
@@ -555,10 +713,10 @@ export const CognitiveMode: React.FC = () => {
                   />
                   <div>
                     <h3 className="text-xl md:text-2xl font-black text-a11y-text">
-                      Informe de Pautas: Norma UNE 153101:2018 EX y ATECA
+                      Comprobación automática de pautas (UNE 153101:2018 EX)
                     </h3>
                     <p className="text-sm font-bold opacity-85 text-a11y-text">
-                      Cumplimiento automático: {atecaSummary.passed} de {atecaSummary.total}{' '}
+                      Pautas que se cumplen: {atecaSummary.passed} de {atecaSummary.total}{' '}
                       criterios ({atecaSummary.score}%)
                     </p>
                   </div>
@@ -619,39 +777,28 @@ export const CognitiveMode: React.FC = () => {
 
               <p className="text-xs md:text-sm font-bold opacity-80 border-t-2 border-a11y-border pt-3 text-a11y-text">
                 ℹ️ Nota técnica (UNE 153101:2018 EX): Esta verificación lingüística aplica los
-                indicadores de legibilidad de la norma y de la herramienta ATECA (frases cortas,
-                voz activa, ausencia de conectores complejos, superlativos y tecnicismos). Para
-                obtener el logotipo oficial de Lectura Fácil, el documento debe validarse además
-                con personas con dificultades de comprensión lectora.
+                indicadores de legibilidad de la norma, inspirados en la herramienta ATECA (frases cortas,
+                voz activa, ausencia de conectores complejos, superlativos y tecnicismos). No sustituye
+                a la validación: un texto solo es Lectura Fácil cuando lo validan personas con
+                dificultades de comprensión lectora, y siempre debe revisarlo un docente.
               </p>
             </div>
           )}
 
-          {/* Barra de Progreso, Resumen y Extracción a PDF */}
+          {/* Barra de Progreso y Resumen */}
           <div className="p-5 rounded-2xl border-4 border-a11y-border bg-a11y-card space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center justify-between">
               <span className="text-xl md:text-2xl font-black text-a11y-text">
                 Progreso: {completedStepsCount} de {steps.length} pasos completados
               </span>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={handleDownloadPdf}
-                  disabled={isExportingPdf}
-                  className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-primary text-a11y-primaryText hover:brightness-105 text-sm font-black flex items-center gap-2"
-                  aria-label="Extraer y descargar esta adaptación como archivo PDF"
-                >
-                  <Download className="w-5 h-5" aria-hidden="true" />
-                  <span>{isExportingPdf ? 'Creando PDF...' : 'Extraer como PDF'}</span>
-                </button>
-                <button
-                  onClick={() => setSteps(steps.map((s) => ({ ...s, completed: false })))}
-                  className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText text-sm font-bold flex items-center gap-2"
-                  aria-label="Reiniciar todos los pasos a no completados"
-                >
-                  <RotateCcw className="w-5 h-5" aria-hidden="true" />
-                  <span>Reiniciar</span>
-                </button>
-              </div>
+              <button
+                onClick={() => setSteps(steps.map((s) => ({ ...s, completed: false })))}
+                className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText text-sm font-bold flex items-center gap-2"
+                aria-label="Reiniciar todos los pasos a no completados"
+              >
+                <RotateCcw className="w-5 h-5" aria-hidden="true" />
+                <span>Reiniciar</span>
+              </button>
             </div>
 
             {/* Barra visual de progreso */}
@@ -727,13 +874,23 @@ export const CognitiveMode: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    <p
-                      className={`text-xl md:text-2xl font-black leading-snug ${
-                        step.completed ? 'line-through text-gray-400' : ''
-                      }`}
-                    >
-                      {step.instruction}
-                    </p>
+                    {isEditing ? (
+                      <textarea
+                        value={step.instruction}
+                        onChange={(e) => updateStepText(step.id, e.target.value)}
+                        rows={2}
+                        aria-label={`Editar el texto del paso ${step.stepNumber}`}
+                        className="w-full p-3 rounded-2xl border-2 border-a11y-primary bg-a11y-bg text-a11y-text text-xl leading-snug"
+                      />
+                    ) : (
+                      <p
+                        className={`text-xl md:text-2xl font-black leading-snug ${
+                          step.completed ? 'line-through text-gray-400' : ''
+                        }`}
+                      >
+                        {step.instruction}
+                      </p>
+                    )}
                   </div>
 
                   {/* Botón para escuchar este paso individual por altavoz */}
@@ -749,6 +906,8 @@ export const CognitiveMode: React.FC = () => {
               );
             })}
           </div>
+
+          {comprehensionFeedback}
         </div>
       )}
 
@@ -773,29 +932,23 @@ export const CognitiveMode: React.FC = () => {
                   frase&quot;. ({completedPhrasesCount} de {pictoPhrases.length} completadas)
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={handleDownloadPdf}
-                  disabled={isExportingPdf}
-                  className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-primary text-a11y-primaryText hover:brightness-105 text-sm font-black flex items-center gap-2"
-                  aria-label="Extraer y descargar esta secuencia de pictogramas como archivo PDF"
-                >
-                  <Download className="w-5 h-5" aria-hidden="true" />
-                  <span>{isExportingPdf ? 'Creando PDF...' : 'Extraer como PDF'}</span>
-                </button>
-                <button
-                  onClick={() =>
-                    setPictoPhrases(pictoPhrases.map((p) => ({ ...p, completed: false })))
-                  }
-                  className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText text-sm font-bold flex items-center gap-2"
-                  aria-label="Reiniciar todas las secuencias de pictogramas"
-                >
-                  <RotateCcw className="w-5 h-5" aria-hidden="true" />
-                  <span>Reiniciar</span>
-                </button>
-              </div>
+              <button
+                onClick={() =>
+                  setPictoPhrases(pictoPhrases.map((p) => ({ ...p, completed: false })))
+                }
+                className="touch-target px-4 py-2 rounded-xl border-2 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText text-sm font-bold flex items-center gap-2"
+                aria-label="Reiniciar todas las secuencias de pictogramas"
+              >
+                <RotateCcw className="w-5 h-5" aria-hidden="true" />
+                <span>Reiniciar</span>
+              </button>
             </div>
           </div>
+
+          {originalToggleButton && (
+            <div className="flex flex-wrap items-center gap-2">{originalToggleButton}</div>
+          )}
+          {originalPanel}
 
           {/* Tarjetas de frases con secuencias de pictogramas ARASAAC */}
           <div className="space-y-6" role="list">
@@ -905,190 +1058,11 @@ export const CognitiveMode: React.FC = () => {
             })}
           </div>
 
+          {comprehensionFeedback}
+
           {/* Atribución oficial obligatoria CC BY-NC-SA 4.0 de ARASAAC */}
           <div className="p-4 rounded-2xl border-2 border-a11y-border bg-a11y-card text-xs md:text-sm font-bold text-a11y-text opacity-90 text-center">
             {ARASAAC_ATTRIBUTION}
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================================
-          APARTADO 3: DOCUMENTO COMPLETO GENERADO POR IA (TEXTO CON TODO + PDF)
-         ===================================================================== */}
-      {fullDocument && (
-        <div
-          className="space-y-6 pt-4 border-t-4 border-a11y-border"
-          role="region"
-          aria-label="Documento completo generado por IA listo para extraer como PDF"
-        >
-          {/* Barra superior de acciones del Documento Completo */}
-          <div className="p-5 rounded-3xl border-4 border-a11y-primary bg-a11y-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-            <div className="space-y-1">
-              <span className="text-xs font-black uppercase tracking-wider text-a11y-primary">
-                📄 DOCUMENTO COMPLETO GENERADO POR IA (LECTURA FÁCIL + APOYO VISUAL)
-              </span>
-              <h3 className="text-2xl md:text-3xl font-black text-a11y-text">
-                {fullDocument.title}
-              </h3>
-              <p className="text-sm font-bold opacity-85 text-a11y-text">
-                Adaptado para el perfil <strong>{userProfile.shortTitle}</strong> según Norma UNE 153101:2018 EX y criterios ATECA.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={isExportingPdf}
-                className="touch-target px-5 py-3.5 rounded-2xl border-4 border-a11y-border bg-a11y-primary text-a11y-primaryText font-black text-base sm:text-lg flex items-center gap-2.5 hover:brightness-105 shadow-lg"
-                aria-label="Descargar y extraer el documento completo como archivo PDF"
-              >
-                <Download className="w-6 h-6 shrink-0" aria-hidden="true" />
-                <span>{isExportingPdf ? 'Generando PDF...' : '📥 Extraer como PDF'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  speak(
-                    `${fullDocument.title}. ${fullDocument.summary}. ${fullDocument.fullTextParagraphs.join(' ')}`
-                  )
-                }
-                className="touch-target px-4 py-3.5 rounded-2xl border-4 border-a11y-border bg-a11y-bg text-a11y-text hover:bg-a11y-primary hover:text-a11y-primaryText font-black text-base flex items-center gap-2"
-                aria-label="Escuchar todo el documento completo en voz alta"
-              >
-                <Volume2 className="w-6 h-6 shrink-0" aria-hidden="true" />
-                <span>Escuchar Todo</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Vista unificada tipo folio de todo el contenido generado por la IA */}
-          <div className="p-6 md:p-8 rounded-3xl border-4 border-a11y-border bg-a11y-card space-y-6">
-            {/* 1. Resumen / Idea Principal */}
-            <div className="p-4 rounded-2xl border-2 border-a11y-primary bg-a11y-bg space-y-1">
-              <span className="text-xs font-black uppercase tracking-wider text-a11y-primary">
-                IDEA PRINCIPAL / RESUMEN:
-              </span>
-              <p className="text-xl md:text-2xl font-black text-a11y-text leading-snug">
-                💡 {fullDocument.summary}
-              </p>
-            </div>
-
-            {/* 2. Texto Completo Continuo redactado por la IA */}
-            <div className="space-y-3">
-              <h4 className="text-xl md:text-2xl font-black text-a11y-primary border-b-2 border-a11y-border pb-2">
-                TEXTO COMPLETO ADAPTADO:
-              </h4>
-              <div className="space-y-3">
-                {fullDocument.fullTextParagraphs.map((paragraph, index) => (
-                  <p
-                    key={`para-${index}`}
-                    className="p-4 rounded-2xl border-l-8 border-a11y-primary bg-a11y-bg text-lg md:text-2xl font-bold text-a11y-text leading-relaxed"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. Pasos Clave incluidos en el documento */}
-            {fullDocument.steps.length > 0 && (
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xl md:text-2xl font-black text-a11y-primary border-b-2 border-a11y-border pb-2">
-                  PASOS A SEGUIR / PUNTOS CLAVE:
-                </h4>
-                <div className="space-y-2.5">
-                  {fullDocument.steps.map((step) => (
-                    <div
-                      key={step.id}
-                      className="p-4 rounded-2xl border-2 border-a11y-border bg-a11y-bg flex items-start gap-3"
-                    >
-                      <span className="text-2xl shrink-0" aria-hidden="true">
-                        {step.emoji}
-                      </span>
-                      <p className="text-lg md:text-xl font-black text-a11y-text">
-                        <span className="text-a11y-primary mr-2">PASO {step.stepNumber}:</span>
-                        {step.instruction}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 4. Glosario de Palabras Difíciles Explicadas */}
-            {fullDocument.glossary.length > 0 && (
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xl md:text-2xl font-black text-a11y-primary border-b-2 border-a11y-border pb-2">
-                  GLOSARIO DE PALABRAS EXPLICADAS (UNE 153101):
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {fullDocument.glossary.map((item, idx) => (
-                    <div
-                      key={`gloss-${idx}`}
-                      className="p-3.5 rounded-2xl border-2 border-a11y-border bg-a11y-bg"
-                    >
-                      <span className="block text-base md:text-lg font-black text-a11y-primary">
-                        📌 {item.term}
-                      </span>
-                      <span className="block text-base font-bold text-a11y-text mt-1">
-                        {item.definition}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 5. Pictogramas ARASAAC incluidos en el Documento */}
-            {fullDocument.pictogramTokens.length > 0 && (
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xl md:text-2xl font-black text-a11y-primary border-b-2 border-a11y-border pb-2">
-                  PICTOGRAMAS ARASAAC DE APOYO VISUAL:
-                </h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {fullDocument.pictogramTokens.map((tok, idx) => (
-                    <div
-                      key={`doc-picto-${idx}`}
-                      className="p-3 rounded-2xl border-4 border-black bg-white text-black flex flex-col items-center justify-between"
-                    >
-                      <div className="w-24 h-24 flex items-center justify-center">
-                        {tok.imageUrl ? (
-                          <img
-                            src={tok.imageUrl}
-                            alt={`Pictograma de ${tok.word}`}
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <span className="font-black text-sm uppercase">{tok.word}</span>
-                        )}
-                      </div>
-                      <span className="mt-2 w-full text-center font-black text-sm uppercase border-t-2 border-black pt-1">
-                        {tok.word}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Botón inferior de descarga rápida a PDF */}
-            <div className="pt-4 border-t-2 border-a11y-border flex justify-end">
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                disabled={isExportingPdf}
-                className="w-full sm:w-auto touch-target px-6 py-4 rounded-2xl border-4 border-a11y-border bg-a11y-primary text-a11y-primaryText font-black text-xl flex items-center justify-center gap-3 hover:brightness-105"
-              >
-                <Download className="w-7 h-7 shrink-0" aria-hidden="true" />
-                <span>
-                  {isExportingPdf
-                    ? 'GENERANDO ARCHIVO PDF...'
-                    : '📥 DESCARGAR DOCUMENTO COMPLETO EN PDF'}
-                </span>
-              </button>
-            </div>
           </div>
         </div>
       )}

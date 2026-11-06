@@ -1,12 +1,4 @@
-import {
-  EasyReadStep,
-  AacOption,
-  PictogramResult,
-  PictogramPhrase,
-  FullAccessibleDocument,
-  GlossaryItem,
-  PictogramToken
-} from '../types';
+import { EasyReadStep, AacOption, PictogramResult, PictogramPhrase } from '../types';
 import { devLogger } from './loggerService';
 import { findPictogramIds, getPictogramImageUrl } from './arasaacService';
 
@@ -59,7 +51,7 @@ export class AiService {
   private currentProfileDirective: string = '';
 
   constructor(apiKey?: string) {
-    this.updateApiKey(apiKey || import.meta.env.VITE_GEMINI_API_KEY || '');
+    this.updateApiKey(apiKey || (import.meta.env.DEV ? import.meta.env.VITE_GEMINI_API_KEY || '' : ''));
   }
 
   public updateProfileDirective(directive: string, profileTitle?: string) {
@@ -87,8 +79,7 @@ export class AiService {
     const res = await this.callGeminiWithFallback({
       systemInstruction: 'Responde brevemente.',
       parts: [{ text: 'Responde solo: CONEXION_OK' }],
-      jsonMode: false,
-      temperature: 0.1
+      jsonMode: false
     });
     return res;
   }
@@ -101,7 +92,6 @@ export class AiService {
     systemInstruction: string;
     parts: any[];
     jsonMode?: boolean;
-    temperature?: number;
   }): Promise<string> {
     if (!this.hasApiKey()) {
       const msg = 'Clave API de Gemini no configurada. Por favor introduce tu VITE_GEMINI_API_KEY en Ajustes (botón arriba a la derecha o tecla S).';
@@ -121,21 +111,25 @@ export class AiService {
       try {
         devLogger.api('GeminiAPI', `Enviando solicitud al modelo: ${modelName}...`);
 
+        // Los modelos Gemini 3.6 Flash y 3.5 Flash-Lite ya no admiten parámetros de muestreo
+        // como "temperature" (guía oficial de Google), así que no se envían.
+        // El límite de salida es amplio porque estos modelos también "piensan" antes de responder.
         const generationConfig: Record<string, any> = {
-          temperature: params.temperature ?? 0.2,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
         };
 
         if (params.jsonMode) {
           generationConfig.responseMimeType = 'application/json';
         }
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(this.currentApiKey)}`;
+        // La clave va en una cabecera y no en la dirección, para que no quede en historiales ni registros.
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
 
         const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'x-goog-api-key': this.currentApiKey,
           },
           body: JSON.stringify({
             systemInstruction: {
@@ -222,9 +216,27 @@ export class AiService {
     return await this.callGeminiWithFallback({
       systemInstruction,
       parts,
-      jsonMode: false,
-      temperature: 0.2
+      jsonMode: false
     });
+  }
+
+  /**
+   * Instrucción extra cuando el alumno pulsa «Más fácil» u «Otra versión».
+   */
+  private buildRefinementBlock(
+    refinement?: 'simpler' | 'alternative',
+    previousVersion?: string
+  ): string {
+    const previous = previousVersion
+      ? `VERSIÓN ANTERIOR (no la repitas):\n${previousVersion}\n`
+      : '';
+    if (refinement === 'simpler') {
+      return `\nIMPORTANTE: el alumno ha pulsado «Más fácil» porque NO ha entendido la versión anterior. Haz una versión MÁS SENCILLA que la anterior: frases todavía más cortas (8 palabras como máximo), una sola idea por frase, solo palabras muy frecuentes y un ejemplo de la vida diaria cuando haya una idea abstracta.\n${previous}`;
+    }
+    if (refinement === 'alternative') {
+      return `\nIMPORTANTE: el alumno ha pulsado «Necesito otra versión». Explica lo mismo con OTRAS palabras y OTROS ejemplos, con el mismo nivel de dificultad. No repitas las frases de la versión anterior.\n${previous}`;
+    }
+    return '';
   }
 
   /**
@@ -234,14 +246,20 @@ export class AiService {
   async simplifyToEasyRead(params: {
     text?: string;
     base64Image?: string;
+    /** 'simpler': el alumno pidió una versión más fácil; 'alternative': pidió otra versión. */
+    refinement?: 'simpler' | 'alternative';
+    /** Versión anterior que el alumno no entendió, para no repetirla. */
+    previousVersion?: string;
   }): Promise<{ summary: string; steps: EasyReadStep[] }> {
     const profileBlock = this.currentProfileDirective
       ? `\nADAPTACIÓN ESPECÍFICA AL PERFIL DEL USUARIO:\n${this.currentProfileDirective}\n`
       : '';
 
+    const refinementBlock = this.buildRefinementBlock(params.refinement, params.previousVersion);
+
     const systemInstruction =
       `Adapta cualquier texto o instrucción a formato de Lectura Fácil. Usa frases cortas, una sola idea por línea, lenguaje 100% literal (sin metáforas ni ironías) y divide las tareas en pasos numerados muy sencillos con un emoji representativo al inicio de cada paso.
-${profileBlock}
+${profileBlock}${refinementBlock}
 ${UNE_153101_GUIDELINES}
 
 Responde estrictamente con un objeto JSON válido con esta estructura:
@@ -283,8 +301,7 @@ Responde estrictamente con un objeto JSON válido con esta estructura:
     const rawText = await this.callGeminiWithFallback({
       systemInstruction,
       parts,
-      jsonMode: true,
-      temperature: 0.2
+      jsonMode: true
     });
 
     let parsed: any = null;
@@ -331,14 +348,17 @@ Responde estrictamente con un objeto JSON válido con esta estructura:
   async generatePictograms(params: {
     text?: string;
     base64Image?: string;
+    refinement?: 'simpler' | 'alternative';
+    previousVersion?: string;
   }): Promise<PictogramResult> {
     const profileBlock = this.currentProfileDirective
       ? `\nADAPTACIÓN ESPECÍFICA AL PERFIL DEL USUARIO:\n${this.currentProfileDirective}\n`
       : '';
+    const refinementBlock = this.buildRefinementBlock(params.refinement, params.previousVersion);
 
     const systemInstruction =
       `Eres un especialista en accesibilidad cognitiva y Comunicación Aumentativa y Alternativa (CAA). Adapta el texto o documento a frases de Lectura Fácil que se representarán con pictogramas.
-${profileBlock}
+${profileBlock}${refinementBlock}
 ${UNE_153101_GUIDELINES}
 
 ${PICTOGRAM_GUIDELINES}
@@ -375,8 +395,7 @@ Responde estrictamente con un objeto JSON válido con esta estructura:
     const rawText = await this.callGeminiWithFallback({
       systemInstruction,
       parts,
-      jsonMode: true,
-      temperature: 0.2
+      jsonMode: true
     });
 
     let parsed: any = null;
@@ -455,167 +474,6 @@ Responde estrictamente con un objeto JSON válido con esta estructura:
   }
 
   /**
-   * 2c. MODO COGNITIVO – DOCUMENTO COMPLETO UNIFICADO (PARA EXTRAER COMO PDF)
-   * Genera un texto completo e integral que reúne toda la adaptación (Título, Resumen,
-   * Texto completo redactado en Lectura Fácil, Pasos clave, Glosario de palabras difíciles
-   * y Pictogramas ARASAAC de apoyo) listo para leerse de corrido y extraerse como PDF.
-   */
-  async generateFullDocument(params: {
-    text?: string;
-    base64Image?: string;
-  }): Promise<FullAccessibleDocument> {
-    const profileBlock = this.currentProfileDirective
-      ? `\nADAPTACIÓN ESPECÍFICA AL PERFIL DEL USUARIO:\n${this.currentProfileDirective}\n`
-      : '';
-
-    const systemInstruction = `Eres un especialista en Accesibilidad Cognitiva, Lectura Fácil (Norma UNE 153101:2018 EX + herramienta ATECA) y Comunicación Aumentativa (ARASAAC).
-Tu objetivo es generar un DOCUMENTO COMPLETO Y AUTOCONTENIDO que contenga TODA la información explicada de principio a fin en un texto continuo y estructurado (listo para imprimirse o extraerse en PDF sin depender de la interfaz interactiva de la web).
-${profileBlock}
-${UNE_153101_GUIDELINES}
-
-Responde estrictamente con un objeto JSON válido con esta estructura exacta:
-{
-  "title": "Título claro y directo del documento",
-  "summary": "Resumen general en 1 o 2 frases muy sencillas de qué trata todo el documento.",
-  "fullTextParagraphs": [
-    "Párrafo 1 en Lectura Fácil explicando la primera parte de forma clara y completa.",
-    "Párrafo 2 en Lectura Fácil con una sola idea principal por oración.",
-    "Párrafo 3 en Lectura Fácil desarrollando todos los detalles importantes sin omitir datos."
-  ],
-  "steps": [
-    {
-      "stepNumber": 1,
-      "emoji": "✅",
-      "instruction": "Paso 1 o acción clave que debe realizar la persona."
-    }
-  ],
-  "glossary": [
-    {
-      "term": "Palabra importante o difícil",
-      "definition": "Explicación muy fácil con palabras de todos los días."
-    }
-  ],
-  "keywords": [
-    { "word": "Médico", "keyword": "médico" },
-    { "word": "Receta", "keyword": "receta" },
-    { "word": "Farmacia", "keyword": "farmacia" }
-  ]
-}`;
-
-    const parts: any[] = [];
-    if (params.base64Image) {
-      parts.push({ inlineData: { mimeType: 'image/jpeg', data: params.base64Image } });
-      parts.push({
-        text: 'Analiza íntegramente el documento o imagen adjunta y redacta un Documento Completo en Lectura Fácil con todo su contenido, pasos, glosario y palabras clave para exportar a PDF.'
-      });
-    }
-    if (params.text) {
-      parts.push({
-        text: `Redacta un Documento Completo en Lectura Fácil que contenga toda la información explicada de principio a fin para exportar a PDF a partir de este contenido: "${params.text}"`
-      });
-    }
-    if (parts.length === 0) {
-      throw new Error('Debes proporcionar un texto o una foto para generar el documento completo.');
-    }
-
-    const rawText = await this.callGeminiWithFallback({
-      systemInstruction,
-      parts,
-      jsonMode: true,
-      temperature: 0.2
-    });
-
-    let parsed: any = null;
-    try {
-      const cleanJson = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const firstBrace = cleanJson.indexOf('{');
-      const lastBrace = cleanJson.lastIndexOf('}');
-      parsed = JSON.parse(
-        firstBrace !== -1 && lastBrace !== -1
-          ? cleanJson.substring(firstBrace, lastBrace + 1)
-          : cleanJson
-      );
-    } catch {
-      parsed = {
-        title: 'Documento Adaptado en Lectura Fácil',
-        summary: 'Contenido adaptado automáticamente por IA.',
-        fullTextParagraphs: rawText
-          .split('\n')
-          .map((l) => l.trim())
-          .filter(Boolean),
-        steps: [],
-        glossary: [],
-        keywords: []
-      };
-    }
-
-    const paragraphs: string[] = Array.isArray(parsed?.fullTextParagraphs)
-      ? parsed.fullTextParagraphs.map((p: any) => String(p).trim()).filter(Boolean)
-      : [];
-
-    const rawSteps: any[] = Array.isArray(parsed?.steps) ? parsed.steps : [];
-    const steps: EasyReadStep[] = rawSteps.map((s: any, idx: number) => ({
-      id: `doc-step-${idx + 1}-${Date.now()}`,
-      stepNumber: Number(s.stepNumber) || idx + 1,
-      emoji: s.emoji || '➡️',
-      instruction: String(s.instruction || s.text || s).trim(),
-      completed: false
-    }));
-
-    const rawGlossary: any[] = Array.isArray(parsed?.glossary) ? parsed.glossary : [];
-    const glossary: GlossaryItem[] = rawGlossary
-      .map((g: any) => ({
-        term: String(g?.term || '').trim(),
-        definition: String(g?.definition || '').trim()
-      }))
-      .filter((g) => g.term && g.definition);
-
-    const rawKeywords: { word: string; keyword: string }[] = Array.isArray(parsed?.keywords)
-      ? parsed.keywords
-          .map((k: any) =>
-            typeof k === 'string'
-              ? { word: k, keyword: k.toLowerCase() }
-              : {
-                  word: String(k?.word || k?.keyword || '').trim(),
-                  keyword: String(k?.keyword || k?.word || '').trim().toLowerCase()
-                }
-          )
-          .filter((k: { word: string; keyword: string }) => k.keyword.length > 0)
-          .slice(0, 8)
-      : [];
-
-    let pictogramTokens: PictogramToken[] = [];
-    if (rawKeywords.length > 0) {
-      try {
-        const idMap = await findPictogramIds(rawKeywords.map((k) => k.keyword));
-        pictogramTokens = rawKeywords.map((k) => {
-          const id = idMap.get(k.keyword) ?? null;
-          return {
-            word: k.word,
-            keyword: k.keyword,
-            pictogramId: id,
-            imageUrl: id ? getPictogramImageUrl(id, 300) : null
-          };
-        });
-      } catch {
-        pictogramTokens = [];
-      }
-    }
-
-    return {
-      title: String(parsed?.title || 'Documento Completo en Lectura Fácil'),
-      summary: String(parsed?.summary || paragraphs[0] || 'Resumen del documento adaptado.'),
-      fullTextParagraphs:
-        paragraphs.length > 0
-          ? paragraphs
-          : steps.map((s) => `${s.stepNumber}. ${s.instruction}`),
-      steps,
-      glossary,
-      pictogramTokens
-    };
-  }
-
-  /**
    * 3. MODO AUDITIVO / HABLA: Comunicador Rápido (CAA)
    * Genera exactamente 3 opciones de respuesta rápida para responder con un toque
    */
@@ -655,8 +513,7 @@ Devuelve estrictamente un arreglo JSON con exactamente 3 opciones:
           text: `La otra persona acaba de decir: "${heardConversation}". Genera 3 respuestas adecuadas para contestarle de inmediato.`
         }
       ],
-      jsonMode: true,
-      temperature: 0.2
+      jsonMode: true
     });
 
     let parsed: any = null;
