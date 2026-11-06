@@ -64,12 +64,43 @@ export interface CognitiveResult {
 
 export type CognitiveOutputFormat = 'easy-read' | 'pictograms';
 
-/** Una palabra clave dentro de una frase, enlazada (si existe) a un pictograma ARASAAC */
+export type PictogramImageSource =
+  | 'arasaac'
+  | 'arasaac-synonym'
+  | 'arasaac-compound'
+  | 'wikimedia'
+  | 'custom'
+  | 'none';
+
+export interface SubPictogramItem {
+  keyword: string;
+  pictogramId: number | null;
+  imageUrl: string;
+}
+
+/** Entrada guardada por un profesor o usuario para una palabra sin pictograma o personalizada */
+export interface CustomPictogramEntry {
+  word: string;
+  imageUrl?: string | null;
+  pictogramId?: number | null;
+  resolvedKeyword?: string;
+  compoundPictograms?: SubPictogramItem[];
+  conceptExplanation?: string;
+  updatedAt: number;
+}
+
+/** Una palabra clave dentro de una frase, enlazada (si existe) a un pictograma ARASAAC, sinónimo, combinación de pictogramas o imagen explicativa */
 export interface PictogramToken {
   word: string;          // Palabra tal y como se muestra bajo el pictograma
   keyword: string;       // Lema en infinitivo/singular usado para buscar en ARASAAC
+  synonyms?: string[];   // Sinónimos alternativos sencillos sugeridos para buscar en ARASAAC
+  fallbackKeywords?: string[]; // 2-3 palabras sencillas para explicarlo con varios pictogramas
   pictogramId: number | null;
   imageUrl: string | null;
+  imageSource?: PictogramImageSource;
+  resolvedKeyword?: string; // Si se encontró mediante un sinónimo, qué palabra se usó
+  compoundPictograms?: SubPictogramItem[]; // Secuencia de 2-3 pictogramas que explican la palabra
+  conceptExplanation?: string; // Breve explicación sencilla del concepto si es complejo
 }
 
 /** Una frase corta (una sola idea) representada como secuencia de pictogramas */
