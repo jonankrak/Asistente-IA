@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Key,
-  Contrast,
   Type,
   Volume2,
   Vibrate,
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useAccessibility } from '../context/AccessibilityContext';
-import { ContrastTheme, FontSize } from '../types';
+import { FontSize } from '../types';
 
 export const SettingsModal: React.FC = () => {
   const {
@@ -29,12 +28,8 @@ export const SettingsModal: React.FC = () => {
     setIsProfileModalOpen,
     isProfileControlEnabled,
     setIsProfileControlEnabled,
-    isColorProfileControlled,
-    setIsColorProfileControlled,
     cognitiveFormat,
     setCognitiveFormat,
-    contrastTheme,
-    setContrastTheme,
     fontSize,
     setFontSize,
     speechRate,
@@ -104,25 +99,11 @@ export const SettingsModal: React.FC = () => {
     setTimeout(() => setSaveSuccess(false), 2500);
   };
 
-  const themes: { id: ContrastTheme; label: string; desc: string }[] = [
-    { id: 'yellow-black', label: 'Amarillo sobre Negro', desc: 'Máximo contraste (>19:1) para baja visión' },
-    { id: 'dark-high', label: 'Blanco sobre Negro', desc: 'Alto contraste oscuro sin fatiga visual' },
-    { id: 'white-black', label: 'Negro sobre Blanco', desc: 'Contraste alto sobre fondo claro' },
-    { id: 'default', label: 'Azul Suave Accesible', desc: 'Baja estimulación sensorial (ideal TEA/TDAH)' }
-  ];
-
   const fontSizes: { id: FontSize; label: string }[] = [
     { id: 'normal', label: 'Normal' },
     { id: 'large', label: 'Grande' },
     { id: 'extralarge', label: 'Muy Grande' }
   ];
-
-  const themeLabels: Record<ContrastTheme, string> = {
-    'yellow-black': 'Amarillo / Negro',
-    'dark-high': 'Blanco / Negro',
-    'white-black': 'Negro / Blanco',
-    default: 'Azul Suave'
-  };
 
   return (
     <div
@@ -154,7 +135,7 @@ export const SettingsModal: React.FC = () => {
           className={`p-4 sm:p-5 rounded-3xl border-4 space-y-4 transition-all ${
             isProfileControlEnabled
               ? 'border-a11y-primary bg-a11y-bg'
-              : 'border-amber-400 bg-amber-950/20'
+              : 'border-amber-500 bg-amber-50'
           }`}
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -218,16 +199,12 @@ export const SettingsModal: React.FC = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold">
                 <div className="p-2 rounded-xl bg-a11y-bg border border-a11y-border/40">
                   <span className="block opacity-75">Formato Cognitivo:</span>
                   <strong className="text-a11y-primary">
                     {cognitiveFormat === 'pictograms' ? 'Pictogramas ARASAAC' : 'Lectura Fácil UNE'}
                   </strong>
-                </div>
-                <div className="p-2 rounded-xl bg-a11y-bg border border-a11y-border/40">
-                  <span className="block opacity-75">Tema de Contraste:</span>
-                  <strong className="text-a11y-primary">{themeLabels[contrastTheme]}</strong>
                 </div>
                 <div className="p-2 rounded-xl bg-a11y-bg border border-a11y-border/40">
                   <span className="block opacity-75">Tamaño y Dislexia:</span>
@@ -351,90 +328,11 @@ export const SettingsModal: React.FC = () => {
         </div>
 
         {/* =====================================================================
-            SECCIÓN 3: CONTROL MANUAL SEPARADO PARA EL CAMBIO DE COLOR
-           ===================================================================== */}
-        <div
-          className={`p-4 sm:p-5 rounded-3xl border-4 space-y-4 transition-all ${
-            isColorProfileControlled
-              ? 'border-a11y-border bg-a11y-bg'
-              : 'border-cyan-400 bg-cyan-950/20'
-          }`}
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <Contrast className="w-8 h-8 text-a11y-primary shrink-0 mt-0.5" aria-hidden="true" />
-              <div>
-                <h3 className="text-lg sm:text-xl font-black text-a11y-text">
-                  {isColorProfileControlled
-                    ? `Cambio de Color: Fijado por Perfil (${themeLabels[contrastTheme]})`
-                    : 'Cambio de Color Manual: ACTIVO'}
-                </h3>
-                <p className="text-xs sm:text-sm font-bold opacity-85 text-a11y-text mt-0.5">
-                  {isColorProfileControlled
-                    ? 'El color y contraste están fijados por el perfil. Pulsa el botón separado para cambiar el color manualmente.'
-                    : 'Puedes escoger manualmente cualquier tema de color sin alterar el resto del perfil.'}
-                </p>
-              </div>
-            </div>
-
-            {/* Botón de Ajuste Separado Exclusivo para el Cambio de Color */}
-            <button
-              type="button"
-              onClick={() => setIsColorProfileControlled(!isColorProfileControlled)}
-              aria-pressed={!isColorProfileControlled}
-              className={`touch-target px-4 py-3 rounded-2xl border-3 font-black text-sm flex items-center justify-center gap-2 shrink-0 transition-transform active:scale-95 ${
-                isColorProfileControlled
-                  ? 'bg-cyan-400 text-black border-black hover:brightness-105'
-                  : 'bg-green-500 text-black border-black hover:brightness-105'
-              }`}
-            >
-              <Contrast className="w-5 h-5 shrink-0" aria-hidden="true" />
-              <span>
-                {isColorProfileControlled
-                  ? 'Activar Cambio de Color Manual'
-                  : 'Volver a Color del Perfil'}
-              </span>
-            </button>
-          </div>
-
-          <fieldset
-            disabled={isColorProfileControlled}
-            className={`transition-opacity ${
-              isColorProfileControlled ? 'opacity-55 pointer-events-none select-none' : 'opacity-100'
-            }`}
-          >
-            <div
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-              role="radiogroup"
-              aria-label="Temas de alto contraste"
-            >
-              {themes.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={contrastTheme === t.id}
-                  onClick={() => setContrastTheme(t.id)}
-                  className={`touch-target p-3.5 rounded-2xl border-4 text-left flex flex-col justify-center transition-all ${
-                    contrastTheme === t.id
-                      ? 'border-a11y-focus ring-2 ring-a11y-focus bg-a11y-primary text-a11y-primaryText font-black'
-                      : 'border-a11y-border bg-a11y-card text-a11y-text font-bold'
-                  }`}
-                >
-                  <span className="text-base sm:text-lg">{t.label}</span>
-                  <span className="text-xs opacity-85 mt-0.5">{t.desc}</span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        </div>
-
-        {/* =====================================================================
-            SECCIÓN 4: PARÁMETROS FIJADOS POR EL PERFIL (Texto Fácil / Pictogramas, Letra, Voz...)
+            SECCIÓN 3: PARÁMETROS FIJADOS POR EL PERFIL (Texto Fácil / Pictogramas, Letra, Voz...)
            ===================================================================== */}
         <div className="relative space-y-6">
           {isProfileControlEnabled && (
-            <div className="p-3.5 rounded-2xl border-2 border-amber-400 bg-amber-950/40 text-amber-100 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm font-bold">
+            <div className="p-3.5 rounded-2xl border-2 border-amber-600 bg-amber-50 text-amber-950 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm font-bold">
               <span>
                 🔒 Pictogramas / Texto Fácil, tipografía y voz están fijados por el perfil{' '}
                 <strong>{userProfile.shortTitle}</strong>.
@@ -442,7 +340,7 @@ export const SettingsModal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsProfileControlEnabled(false)}
-                className="px-3 py-1.5 rounded-xl bg-amber-400 text-black font-black text-xs uppercase"
+                className="px-3 py-1.5 rounded-xl bg-amber-400 border border-black text-black font-black text-xs uppercase"
               >
                 Desbloquear Ajuste Manual
               </button>

@@ -130,7 +130,7 @@ export const ProfileSelectorModal: React.FC = () => {
                         {option.levelLabel}
                       </span>
                       {isCurrent && (
-                        <span className="flex items-center gap-1 text-xs font-black text-green-400">
+                        <span className="flex items-center gap-1 text-xs font-black text-green-700">
                           <CheckCircle2 className="w-5 h-5" aria-hidden="true" />
                           Activo
                         </span>
@@ -147,38 +147,38 @@ export const ProfileSelectorModal: React.FC = () => {
                   <div className="w-full pt-3 border-t-2 border-a11y-border space-y-2">
                     <div className="flex flex-wrap gap-1.5 text-xs font-black">
                       {option.recommendedFormat === 'pictograms' ? (
-                        <span className="px-2.5 py-1 rounded-lg bg-purple-950/60 border border-purple-400 text-purple-200 flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-lg bg-purple-100 border border-purple-700 text-purple-950 flex items-center gap-1">
                           <Images className="w-3.5 h-3.5" aria-hidden="true" />
                           Pictogramas ARASAAC
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-lg bg-sky-950/60 border border-sky-400 text-sky-200 flex items-center gap-1">
+                        <span className="px-2.5 py-1 rounded-lg bg-sky-100 border border-sky-700 text-sky-950 flex items-center gap-1">
                           <FileText className="w-3.5 h-3.5" aria-hidden="true" />
                           Lectura Fácil (pautas UNE)
                         </span>
                       )}
 
-                      <span className="px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-500 text-zinc-200 flex items-center gap-1">
+                      <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-600 text-slate-900 flex items-center gap-1">
                         <Volume2 className="w-3.5 h-3.5" aria-hidden="true" />
                         Voz {option.recommendedSpeechRate}x {option.recommendedAutoSpeak ? '(Auto)' : '(Manual)'}
                       </span>
 
-                      <span className="px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-500 text-zinc-200">
+                      <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-600 text-slate-900">
                         Letra: {option.recommendedFontSize === 'extralarge' ? 'Extra Grande' : option.recommendedFontSize === 'large' ? 'Grande' : 'Normal'}
                       </span>
 
-                      <span className="px-2.5 py-1 rounded-lg bg-zinc-800 border border-zinc-500 text-zinc-200">
+                      <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-600 text-slate-900">
                         Máx. {option.maxWordsPerSentence} pal./frase
                       </span>
 
                       {option.dyslexiaFriendly && (
-                        <span className="px-2.5 py-1 rounded-lg bg-teal-950/60 border border-teal-400 text-teal-200">
+                        <span className="px-2.5 py-1 rounded-lg bg-teal-100 border border-teal-700 text-teal-950">
                           Tipografía Dislexia
                         </span>
                       )}
 
                       {option.stepByStepFocus && (
-                        <span className="px-2.5 py-1 rounded-lg bg-amber-950/60 border border-amber-400 text-amber-200">
+                        <span className="px-2.5 py-1 rounded-lg bg-amber-100 border border-amber-700 text-amber-950">
                           Guía Paso a Paso
                         </span>
                       )}

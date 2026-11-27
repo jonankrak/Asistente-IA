@@ -15,7 +15,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Comprender textos · apoyo puntual',
         description:
           'Entiende textos sencillos y conceptos concretos; necesita ayuda con las ideas abstractas.',
-        badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
+        badgeColor: 'border-emerald-700 bg-emerald-100 text-emerald-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
         recommendedTheme: 'default',
@@ -37,7 +37,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Comprender textos · apoyo frecuente',
         description:
           'Necesita textos muy sencillos, frases cortas y apoyo gráfico para entender la información.',
-        badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
+        badgeColor: 'border-amber-700 bg-amber-100 text-amber-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
         recommendedTheme: 'dark-high',
@@ -59,7 +59,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Comprender textos · apoyo intenso',
         description:
           'Se comunica sobre todo con pictogramas u otros sistemas de comunicación aumentativa; el texto escrito le ayuda poco.',
-        badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
+        badgeColor: 'border-rose-700 bg-rose-100 text-rose-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
         recommendedTheme: 'yellow-black',
@@ -89,7 +89,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Instrucciones y rutinas · apoyo puntual',
         description:
           'Lee frases completas, pero le cuesta el lenguaje figurado y lo que no se dice de forma explícita.',
-        badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
+        badgeColor: 'border-emerald-700 bg-emerald-100 text-emerald-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
         recommendedTheme: 'default',
@@ -111,7 +111,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Instrucciones y rutinas · apoyo frecuente',
         description:
           'Entiende mejor la información en frases sencillas, con un orden fijo y sin cambios imprevistos.',
-        badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
+        badgeColor: 'border-amber-700 bg-amber-100 text-amber-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
         recommendedTheme: 'default',
@@ -133,7 +133,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Instrucciones y rutinas · apoyo intenso',
         description:
           'Se apoya sobre todo en pictogramas y consignas muy breves para seguir una actividad.',
-        badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
+        badgeColor: 'border-rose-700 bg-rose-100 text-rose-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
         recommendedTheme: 'dark-high',
@@ -163,7 +163,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Leer con facilidad · apoyo puntual',
         description:
           'Lee con algo de esfuerzo; le ayudan las palabras sencillas y algo más de tiempo.',
-        badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
+        badgeColor: 'border-emerald-700 bg-emerald-100 text-emerald-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
         recommendedTheme: 'default',
@@ -185,7 +185,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Leer con facilidad · apoyo frecuente',
         description:
           'Leer le cuesta bastante; le ayudan la tipografía espaciada, las frases breves y escuchar el texto.',
-        badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
+        badgeColor: 'border-amber-700 bg-amber-100 text-amber-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
         recommendedTheme: 'white-black',
@@ -207,7 +207,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Leer con facilidad · apoyo intenso',
         description:
           'Necesita escuchar el texto y apoyarse en pictogramas para acceder a la información.',
-        badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
+        badgeColor: 'border-rose-700 bg-rose-100 text-rose-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'pictograms',
         recommendedTheme: 'yellow-black',
@@ -237,7 +237,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Atención y pasos · apoyo puntual',
         description:
           'Sigue bien las tareas si los pasos son claros y empiezan por una acción.',
-        badgeColor: 'border-emerald-500 bg-emerald-950/40 text-emerald-200',
+        badgeColor: 'border-emerald-700 bg-emerald-100 text-emerald-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
         recommendedTheme: 'default',
@@ -259,7 +259,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Atención y pasos · apoyo frecuente',
         description:
           'Le cuesta mantener la atención en textos largos; le ayudan los pasos breves y el formato ordenado.',
-        badgeColor: 'border-amber-500 bg-amber-950/40 text-amber-200',
+        badgeColor: 'border-amber-700 bg-amber-100 text-amber-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
         recommendedTheme: 'dark-high',
@@ -281,7 +281,7 @@ export const PROFILE_CATEGORIES: ProfileCategory[] = [
         shortTitle: 'Atención y pasos · apoyo intenso',
         description:
           'Trabaja mejor con pasos muy cortos, guiados y con pausas entre ellos.',
-        badgeColor: 'border-rose-500 bg-rose-950/40 text-rose-200',
+        badgeColor: 'border-rose-700 bg-rose-100 text-rose-950',
         recommendedMode: 'cognitive',
         recommendedFormat: 'easy-read',
         recommendedTheme: 'dark-high',

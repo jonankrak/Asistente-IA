@@ -155,10 +155,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       : userProfile.recommendedFormat;
   });
 
-  const [contrastTheme, setContrastThemeState] = useState<ContrastTheme>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CONTRAST) as ContrastTheme;
-    return saved || userProfile.recommendedTheme;
-  });
+  const [contrastTheme, setContrastThemeState] = useState<ContrastTheme>('white-black');
 
   const [fontSize, setFontSizeState] = useState<FontSize>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.FONT_SIZE) as FontSize;
@@ -223,18 +220,16 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
 
   // Aplicar todos los parámetros de un perfil a la aplicación
   const applyAllProfileParameters = useCallback(
-    (profile: UserProfileOption, forceColorUpdate: boolean = false) => {
+    (profile: UserProfileOption) => {
       setModeState(profile.recommendedMode);
       localStorage.setItem(STORAGE_KEYS.MODE, profile.recommendedMode);
 
       setCognitiveFormatState(profile.recommendedFormat);
       localStorage.setItem(STORAGE_KEYS.COGNITIVE_FORMAT, profile.recommendedFormat);
 
-      if (isColorProfileControlled || forceColorUpdate) {
-        setContrastThemeState(profile.recommendedTheme);
-        localStorage.setItem(STORAGE_KEYS.CONTRAST, profile.recommendedTheme);
-        document.documentElement.setAttribute('data-theme', profile.recommendedTheme);
-      }
+      setContrastThemeState('white-black');
+      localStorage.setItem(STORAGE_KEYS.CONTRAST, 'white-black');
+      document.documentElement.setAttribute('data-theme', 'white-black');
 
       setFontSizeState(profile.recommendedFontSize);
       localStorage.setItem(STORAGE_KEYS.FONT_SIZE, profile.recommendedFontSize);
@@ -305,32 +300,15 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
     [userProfile, applyAllProfileParameters, announce]
   );
 
-  // Activar o desactivar el Control Automático de Color por Perfil de forma independiente
+  // El fondo es siempre blanco fijo (sin opción de cambio)
   const setIsColorProfileControlled = useCallback(
-    (enabled: boolean) => {
-      setIsColorProfileControlledState(enabled);
-      localStorage.setItem(STORAGE_KEYS.COLOR_PROFILE_CONTROL, enabled.toString());
-      if (enabled) {
-        setContrastThemeState(userProfile.recommendedTheme);
-        localStorage.setItem(STORAGE_KEYS.CONTRAST, userProfile.recommendedTheme);
-        document.documentElement.setAttribute('data-theme', userProfile.recommendedTheme);
-        devLogger.info(
-          'Color',
-          `Control automático de color por perfil ACTIVADO (${userProfile.recommendedTheme})`
-        );
-        announce(
-          `Color automático del perfil activado: ${userProfile.shortTitle}.`,
-          'assertive'
-        );
-      } else {
-        devLogger.info('Color', 'Cambio de color MANUAL activado de forma independiente.');
-        announce(
-          'Control manual de color activado. Ahora puedes cambiar el tema de contraste libremente.',
-          'assertive'
-        );
-      }
+    (_enabled: boolean) => {
+      setIsColorProfileControlledState(true);
+      setContrastThemeState('white-black');
+      localStorage.setItem(STORAGE_KEYS.CONTRAST, 'white-black');
+      document.documentElement.setAttribute('data-theme', 'white-black');
     },
-    [userProfile, announce]
+    []
   );
 
   // Seleccionar un perfil diagnóstico/funcional (reactiva el control por perfil y aplica sus parámetros)
@@ -394,10 +372,10 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.COGNITIVE_FORMAT, format);
   }, []);
 
-  const setContrastTheme = useCallback((theme: ContrastTheme) => {
-    setContrastThemeState(theme);
-    localStorage.setItem(STORAGE_KEYS.CONTRAST, theme);
-    document.documentElement.setAttribute('data-theme', theme);
+  const setContrastTheme = useCallback((_theme: ContrastTheme) => {
+    setContrastThemeState('white-black');
+    localStorage.setItem(STORAGE_KEYS.CONTRAST, 'white-black');
+    document.documentElement.setAttribute('data-theme', 'white-black');
   }, []);
 
   const setFontSize = useCallback((size: FontSize) => {

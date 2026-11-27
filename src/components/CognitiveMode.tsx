@@ -876,7 +876,7 @@ export const CognitiveMode: React.FC = () => {
         <div
           role="alert"
           aria-live="assertive"
-          className="p-4 rounded-2xl border-4 border-red-500 bg-red-950/40 text-red-200 text-lg font-bold"
+          className="p-4 rounded-2xl border-4 border-red-600 bg-red-50 text-red-950 text-lg font-bold"
         >
           {errorMsg}
         </div>
@@ -948,25 +948,25 @@ export const CognitiveMode: React.FC = () => {
                         key={check.id}
                         className={`p-3.5 rounded-2xl border-2 flex items-start gap-3 ${
                           isOk
-                            ? 'border-green-500/70 bg-green-950/25 text-a11y-text'
+                            ? 'border-green-600 bg-green-50 text-green-950'
                             : isWarn
-                            ? 'border-yellow-400 bg-yellow-950/30 text-yellow-100'
-                            : 'border-red-500 bg-red-950/35 text-red-100'
+                            ? 'border-amber-600 bg-amber-50 text-amber-950'
+                            : 'border-red-600 bg-red-50 text-red-950'
                         }`}
                       >
                         {isOk ? (
                           <CheckCircle2
-                            className="w-6 h-6 text-green-400 shrink-0 mt-0.5"
+                            className="w-6 h-6 text-green-700 shrink-0 mt-0.5"
                             aria-hidden="true"
                           />
                         ) : isWarn ? (
                           <AlertTriangle
-                            className="w-6 h-6 text-yellow-400 shrink-0 mt-0.5"
+                            className="w-6 h-6 text-amber-700 shrink-0 mt-0.5"
                             aria-hidden="true"
                           />
                         ) : (
                           <XCircle
-                            className="w-6 h-6 text-red-400 shrink-0 mt-0.5"
+                            className="w-6 h-6 text-red-700 shrink-0 mt-0.5"
                             aria-hidden="true"
                           />
                         )}
@@ -1043,7 +1043,7 @@ export const CognitiveMode: React.FC = () => {
                   role="listitem"
                   className={`p-5 rounded-3xl border-4 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
                     step.completed
-                      ? 'bg-green-950/30 border-green-500 text-green-200 opacity-80'
+                      ? 'bg-green-50 border-green-600 text-green-950 opacity-85'
                       : isGuidedActive
                       ? 'bg-a11y-card border-a11y-primary ring-4 ring-a11y-primary/50 text-a11y-text shadow-xl scale-[1.01]'
                       : stepByStepFocus
@@ -1186,7 +1186,7 @@ export const CognitiveMode: React.FC = () => {
                   role="listitem"
                   className={`p-5 rounded-3xl border-4 transition-all space-y-4 ${
                     phrase.completed
-                      ? 'bg-green-950/30 border-green-500 text-green-200 opacity-85'
+                      ? 'bg-green-50 border-green-600 text-green-950 opacity-85'
                       : isGuidedActive
                       ? 'bg-a11y-card border-a11y-primary ring-4 ring-a11y-primary/50 text-a11y-text shadow-xl scale-[1.01]'
                       : stepByStepFocus

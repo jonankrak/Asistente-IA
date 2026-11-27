@@ -2,67 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Tema por defecto: Yellow-Black (Máximo contraste WCAG AAA > 19:1) */
-  --color-bg: #000000;
-  --color-card: #141414;
-  --color-text: #FFFF00;
-  --color-primary: #FFFF00;
-  --color-primary-text: #000000;
-  --color-border: #FFFF00;
-  --color-focus: #00FFFF;
-  --color-accent: #38BDF8;
-  --color-alert: #FF3333;
-  --font-base-size: 20px;
-}
-
-[data-theme="yellow-black"] {
-  --color-bg: #000000;
-  --color-card: #111111;
-  --color-text: #FFFF00;
-  --color-primary: #FFFF00;
-  --color-primary-text: #000000;
-  --color-border: #FFFF00;
-  --color-focus: #00FFFF;
-  --color-accent: #FFFFFF;
-  --color-alert: #FF3333;
-}
-
-[data-theme="dark-high"] {
-  --color-bg: #000000;
-  --color-card: #18181B;
-  --color-text: #FFFFFF;
-  --color-primary: #38BDF8;
-  --color-primary-text: #000000;
-  --color-border: #A1A1AA;
-  --color-focus: #FACC15;
-  --color-accent: #4ADE80;
-  --color-alert: #EF4444;
-}
-
-[data-theme="white-black"] {
-  --color-bg: #FFFFFF;
-  --color-card: #F4F4F5;
-  --color-text: #000000;
-  --color-primary: #000000;
-  --color-primary-text: #FFFFFF;
-  --color-border: #000000;
-  --color-focus: #0284C7;
-  --color-accent: #15803D;
-  --color-alert: #B91C1C;
-}
-
+:root,
+[data-theme="white-black"],
+[data-theme="yellow-black"],
+[data-theme="dark-high"],
 [data-theme="default"] {
-  /* Tema estándar: tinta azul verdosa con amarillo de rotulador (contraste > 7:1) */
-  --color-bg: #0E2A2F;
-  --color-card: #163A40;
-  --color-text: #F3F7F4;
-  --color-primary: #FFD45E;
-  --color-primary-text: #0E2A2F;
-  --color-border: #4E7A7F;
-  --color-focus: #FFFFFF;
-  --color-accent: #7FD6A4;
-  --color-alert: #FF8A80;
+  /* Fondo blanco fijo siempre con alto contraste accesible sobre blanco */
+  --color-bg: #FFFFFF;
+  --color-card: #F8FAFC;
+  --color-text: #0F172A;
+  --color-primary: #0F172A;
+  --color-primary-text: #FFFFFF;
+  --color-border: #1E293B;
+  --color-focus: #0284C7;
+  --color-accent: #16A34A;
+  --color-alert: #DC2626;
+  --font-base-size: 20px;
 }
 
 /* Escalado de tamaños de fuente accesibles en Escritorio */
@@ -103,7 +58,7 @@
 
 html,
 body {
-  background-color: var(--color-bg);
+  background-color: #FFFFFF !important;
   color: var(--color-text);
   font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.55;
@@ -158,15 +113,15 @@ button:active {
 @keyframes pulse-ring {
   0% {
     transform: scale(0.97);
-    box-shadow: 0 0 0 0 rgba(255, 255, 0, 0.7);
+    box-shadow: 0 0 0 0 rgba(15, 23, 42, 0.4);
   }
   70% {
     transform: scale(1.02);
-    box-shadow: 0 0 0 20px rgba(255, 255, 0, 0);
+    box-shadow: 0 0 0 20px rgba(15, 23, 42, 0);
   }
   100% {
     transform: scale(0.97);
-    box-shadow: 0 0 0 0 rgba(255, 255, 0, 0);
+    box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
   }
 }
 
